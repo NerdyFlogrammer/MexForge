@@ -308,7 +308,7 @@ If you use MexForge in academic work, please cite it:
 
 ```bibtex
 @software{westmeir2026mexforge,
-  author  = {Westmeir, Florian},
+  author  = {Westmeier, Florian},
   title   = {{MexForge}: A Header-Only C++17 Library for MATLAB MEX Interfaces},
   year    = {2026},
   url     = {https://github.com/nerdyflogrammer/MexForge},

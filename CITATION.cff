@@ -8,7 +8,7 @@ abstract: >
   compile-time signature extraction, automatic type marshalling, and a generic
   object lifecycle store.
 authors:
-  - family-names: Westmeir
+  - family-names: Westmeier
     given-names: Florian
     orcid: ""
 doi: "10.5281/zenodo.19560403"
