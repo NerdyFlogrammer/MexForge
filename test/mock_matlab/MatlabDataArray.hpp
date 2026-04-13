@@ -62,7 +62,16 @@ public:
     Array() = default;
 
     template<typename T>
-    explicit Array(T val) : value_(std::move(val)), num_elements_(1) {}
+    explicit Array(T val) : value_(std::move(val)), num_elements_(1) {
+        if constexpr (std::is_same_v<T, float>)        type_ = ArrayType::SINGLE;
+        else if constexpr (std::is_same_v<T, int32_t>) type_ = ArrayType::INT32;
+        else if constexpr (std::is_same_v<T, uint32_t>)type_ = ArrayType::UINT32;
+        else if constexpr (std::is_same_v<T, int64_t>) type_ = ArrayType::INT64;
+        else if constexpr (std::is_same_v<T, uint64_t>)type_ = ArrayType::UINT64;
+        else if constexpr (std::is_same_v<T, bool>)    type_ = ArrayType::LOGICAL;
+        else if constexpr (std::is_same_v<T, std::string>) type_ = ArrayType::MATLAB_STRING;
+        // default: DOUBLE
+    }
 
     // Store a vector (called by ArrayFactory::createArray)
     template<typename T>
@@ -103,6 +112,7 @@ public:
     }
 
     const std::any& stored_value() const { return value_; }
+    void set_type(ArrayType t) { type_ = t; }
 
 protected:
     std::any value_;
@@ -224,6 +234,19 @@ private:
 };
 
 // ============================================================================
+// Type mapping helper for mock (mirrors MatlabTypeTrait in types.hpp)
+// ============================================================================
+
+template<typename T> struct MockArrayType { static constexpr ArrayType value = ArrayType::DOUBLE; };
+template<> struct MockArrayType<float>    { static constexpr ArrayType value = ArrayType::SINGLE; };
+template<> struct MockArrayType<int32_t>  { static constexpr ArrayType value = ArrayType::INT32; };
+template<> struct MockArrayType<uint32_t> { static constexpr ArrayType value = ArrayType::UINT32; };
+template<> struct MockArrayType<int64_t>  { static constexpr ArrayType value = ArrayType::INT64; };
+template<> struct MockArrayType<uint64_t> { static constexpr ArrayType value = ArrayType::UINT64; };
+template<> struct MockArrayType<bool>     { static constexpr ArrayType value = ArrayType::LOGICAL; };
+template<> struct MockArrayType<std::string> { static constexpr ArrayType value = ArrayType::MATLAB_STRING; };
+
+// ============================================================================
 // ArrayFactory
 // ============================================================================
 
@@ -231,10 +254,16 @@ class ArrayFactory {
 public:
     template<typename T>
     Array createScalar(const T& val) {
-        return Array(val);
+        Array arr(val);
+        arr.set_type(MockArrayType<T>::value);
+        return arr;
     }
 
-    Array createScalar(const std::string& val) { return Array(val); }
+    Array createScalar(const std::string& val) {
+        Array arr(val);
+        arr.set_type(ArrayType::MATLAB_STRING);
+        return arr;
+    }
 
     // Store the iterator range as a std::vector<T> inside an Array
     template<typename It>

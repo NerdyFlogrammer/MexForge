@@ -21,11 +21,17 @@ template<typename T, typename Enable = void> struct FromMatlab {
 };
 
 // Scalars: double, float, int32, uint32, int64, uint64, bool
+// Accepts exact type or any numeric type (MATLAB literals are double by default).
 template<typename T>
 struct FromMatlab<T, std::enable_if_t<std::is_arithmetic_v<T> && !std::is_same_v<T, bool>>> {
     static T convert(const matlab::data::Array& arr) {
-        const matlab::data::TypedArray<T> typed = arr;
-        return typed[0];
+        if (arr.getType() == MatlabTypeTrait<T>::array_type) {
+            const matlab::data::TypedArray<T> typed = arr;
+            return typed[0];
+        }
+        // Numeric coercion: MATLAB literals are double — cast to requested type
+        const matlab::data::TypedArray<double> typed = arr;
+        return static_cast<T>(typed[0]);
     }
 };
 
