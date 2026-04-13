@@ -7,31 +7,32 @@
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.19560403-blue.svg)](https://doi.org/10.5281/zenodo.19560403)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-orange.svg)](https://buymeacoffee.com/nerdyflogrammer)
 
-**A header-only C++17 library for creating MATLAB MEX interfaces with minimal boilerplate.**
+**A header-only C++17 library for wrapping C++ classes as MATLAB MEX interfaces — with minimal boilerplate.**
 
-MexForge turns the tedious process of wrapping C++ libraries for MATLAB into a declarative, type-safe, and largely automatic workflow. Instead of writing hundreds of boilerplate classes, you declare bindings in a few lines — the library handles argument marshalling, type validation, object lifecycle, and error reporting at compile time.
+MexForge eliminates the tedious parts of MEX development. Instead of writing hundreds of lines of argument-parsing and type-conversion code, you declare bindings in a few lines and the library handles the rest: argument marshalling, type validation, object lifecycle, and error reporting — largely at compile time.
 
----
-
-## Origin
-
-This project builds on ideas from my master's thesis at Darmstadt University of Applied Sciences (h_da) in 2020. Back then, I needed a MEX interface for a specific C++ library (the [Ettus Research UHD](https://github.com/EttusResearch/uhd) driver for Software Defined Radio hardware) and ended up building a semi-generic abstraction layer around it — a factory pattern with template-based argument validation that made it possible to expose 200+ C++ functions to MATLAB with relatively little per-function code.
-
-That project ([MatlabUhdApi](https://github.com/nerdyflogrammer/MatlabUhdApi)) worked, but the generic parts were still entangled with the UHD-specific code. MexForge is the evolution of that idea: a **standalone, library-agnostic framework** that lets you wrap *any* C++ library for MATLAB, using modern C++17 metaprogramming to push as much work as possible to compile time.
+**Who is this for?**
+- Researchers and engineers who have an existing C++ library and want to call it from MATLAB
+- Anyone tired of writing repetitive `mxGetPr` / `mxGetM` / `mexErrMsgIdAndTxt` boilerplate
+- Projects where performance matters and a Python bridge is not an option
 
 ---
 
-## Features
+## Installation
 
-- **Three binding tiers** — from zero-boilerplate to full control
-- **Compile-time signature extraction** — argument types derived automatically from method pointers
-- **Automatic marshalling** — bidirectional conversion between MATLAB and C++ types via `if constexpr`
-- **Generic object store** — manage multiple instances of your wrapped class with `unique_ptr` ownership
-- **Configurable logging** — compile-time elimination, runtime level control, buffered MATLAB output, file logging
-- **Built-in control commands** — log level, function listing, store management — all callable from MATLAB
-- **Header-only** — no build step for the library itself, just `#include` and go
-- **Cross-platform** — Windows (MSVC), macOS (Clang/Xcode), Linux (GCC)
-- **Pure C++17** — no compiler extensions, no `#pragma once`, standard include guards
+MexForge is header-only — no build step, no dependencies beyond a C++17 compiler and MATLAB.
+
+```bash
+git clone https://github.com/nerdyflogrammer/MexForge.git
+```
+
+Then point `mex` at the `include` directory:
+
+```matlab
+mex -I/path/to/MexForge/include CXXFLAGS='$CXXFLAGS -std=c++17' bindings.cpp
+```
+
+That's it. No CMake required for using the library (CMake is only used for running the test suite).
 
 ---
 
@@ -105,6 +106,20 @@ calc.availableMethods()       % list all methods with descriptions
 calc.showHelp("add")          % show args, types, return type
 clear calc;                   % automatic cleanup
 ```
+
+---
+
+## Features
+
+- **Three binding tiers** — from zero-boilerplate to full control
+- **Compile-time signature extraction** — argument types derived automatically from method pointers
+- **Automatic marshalling** — bidirectional conversion between MATLAB and C++ types via `if constexpr`
+- **Generic object store** — manage multiple instances of your wrapped class with `unique_ptr` ownership
+- **Configurable logging** — compile-time elimination, runtime level control, buffered MATLAB output, file logging
+- **Built-in control commands** — log level, function listing, store management — all callable from MATLAB
+- **Header-only** — no build step for the library itself, just `#include` and go
+- **Cross-platform** — Windows (MSVC), macOS (Clang/Xcode), Linux (GCC)
+- **Pure C++17** — no compiler extensions, standard include guards throughout
 
 ---
 
@@ -296,18 +311,28 @@ MexForge/
 
 ---
 
+## Origin
+
+This project builds on ideas from my master's thesis at Darmstadt University of Applied Sciences (h_da) in 2020. Back then, I needed a MEX interface for a specific C++ library (the [Ettus Research UHD](https://github.com/EttusResearch/uhd) driver for Software Defined Radio hardware) and ended up building a semi-generic abstraction layer around it — a factory pattern with template-based argument validation that made it possible to expose 200+ C++ functions to MATLAB with relatively little per-function code.
+
+That project ([MatlabUhdApi](https://github.com/nerdyflogrammer/MatlabUhdApi)) worked, but the generic parts were still entangled with the UHD-specific code. MexForge is the evolution of that idea: a **standalone, library-agnostic framework** that lets you wrap *any* C++ library for MATLAB, using modern C++17 metaprogramming to push as much work as possible to compile time.
+
+---
+
 ## Support
 
 If MexForge saves you time, consider supporting the project:
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://buymeacoffee.com/nerdyflogrammer)
 
+---
+
 ## Citation
 
 If you use MexForge in academic work, please cite it:
 
 ```bibtex
-@software{westmeir2026mexforge,
+@software{westmeier2026mexforge,
   author  = {Westmeier, Florian},
   title   = {{MexForge}: A Header-Only C++17 Library for MATLAB MEX Interfaces},
   year    = {2026},
