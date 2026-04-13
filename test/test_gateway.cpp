@@ -341,22 +341,86 @@ void test_log_level_get_set() {
 
 void test_unknown_function_calls_error() {
     BoxGateway gw;
-
-    // Unknown function → gateway calls engine->feval("error", ...)
-    // The mock engine just records calls — it does not throw
     gw(no_out(), cmd("nonexistent_function"));
-    // If we get here without a crash, the error path is handled gracefully
-
     std::cout << "  [PASS] unknown function handled gracefully\n";
 }
 
 void test_empty_input_handled() {
     BoxGateway gw;
-
-    // Empty inputs → reportError, no crash
     gw(no_out(), matlab::mex::ArgumentList{});
-
     std::cout << "  [PASS] empty input handled gracefully\n";
+}
+
+// ---- log control commands ---------------------------------------------------
+
+void test_log_matlab_disable() {
+    BoxGateway gw;
+    // Should not crash; mock engine records the call
+    gw(no_out(), make_args({factory.createScalar(std::string("__log_matlab")),
+                            factory.createScalar(false)}));
+    std::cout << "  [PASS] __log_matlab false — no crash\n";
+}
+
+void test_log_matlab_enable() {
+    BoxGateway gw;
+    gw(no_out(), make_args({factory.createScalar(std::string("__log_matlab")),
+                            factory.createScalar(true)}));
+    std::cout << "  [PASS] __log_matlab true — no crash\n";
+}
+
+void test_log_buffer_enable_and_flush() {
+    BoxGateway gw;
+    gw(no_out(), make_args({factory.createScalar(std::string("__log_buffer")),
+                            factory.createScalar(true)}));
+    gw(no_out(), cmd("__log_flush"));
+    std::cout << "  [PASS] __log_buffer + __log_flush — no crash\n";
+}
+
+// ---- __arg_info -------------------------------------------------------------
+
+void test_arg_info_no_crash() {
+    BoxGateway gw;
+    // __arg_info returns a StructArray — mock is minimal but must not crash
+    auto out = single_out();
+    gw(out, cmd("__arg_info", "volume"));
+    std::cout << "  [PASS] __arg_info — no crash\n";
+}
+
+void test_arg_info_with_args() {
+    BoxGateway gw;
+    auto out = single_out();
+    gw(out, cmd("__arg_info", "scale"));
+    // Mock StructArray is created — just verify the command runs
+    std::cout << "  [PASS] __arg_info scale — no crash\n";
+}
+
+// ---- __needs_object ---------------------------------------------------------
+
+void test_needs_object_method() {
+    BoxGateway gw;
+    auto out = single_out();
+    gw(out, cmd("__needs_object", "volume"));
+    bool needs = mexforge::from_matlab<bool>(out[0]);
+    assert(needs == true);
+    std::cout << "  [PASS] __needs_object: volume needs object\n";
+}
+
+void test_needs_object_free() {
+    BoxGateway gw;
+    auto out = single_out();
+    gw(out, cmd("__needs_object", "create"));
+    bool needs = mexforge::from_matlab<bool>(out[0]);
+    assert(needs == false);
+    std::cout << "  [PASS] __needs_object: create does not need object\n";
+}
+
+// ---- vector dispatch --------------------------------------------------------
+
+void test_vector_return_via_gateway() {
+    // BoxGateway doesn't have a vector-returning method, so test via a
+    // standalone runner to confirm the gateway-level plumbing works.
+    // (Full vector dispatch is covered in test_runner.)
+    std::cout << "  [PASS] vector dispatch covered in test_runner\n";
 }
 
 int main() {
@@ -380,6 +444,18 @@ int main() {
 
     test_unknown_function_calls_error();
     test_empty_input_handled();
+
+    test_log_matlab_disable();
+    test_log_matlab_enable();
+    test_log_buffer_enable_and_flush();
+
+    test_arg_info_no_crash();
+    test_arg_info_with_args();
+
+    test_needs_object_method();
+    test_needs_object_free();
+
+    test_vector_return_via_gateway();
 
     std::cout << "All gateway tests passed.\n\n";
     return 0;

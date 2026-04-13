@@ -377,6 +377,147 @@ void test_multiple_objects() {
     std::cout << "  [PASS] AutoObjectRunner: multiple objects isolated correctly\n";
 }
 
+// ---- AutoFreeRunner (Tier 1b) -----------------------------------------------
+
+static double free_square(double x) { return x * x; }
+static std::string free_greet(std::string name) { return "hello_" + name; }
+static void free_noop() {}
+
+void test_auto_free_runner_scalar() {
+    mexforge::AutoFreeRunner<&free_square> runner;
+
+    auto engine = make_engine();
+    auto logger = make_logger(engine);
+    auto inputs = make_free_inputs(5.0);
+    auto outputs = make_single_output();
+
+    runner.run(outputs, inputs, engine, *logger);
+
+    double result = mexforge::from_matlab<double>(outputs[0]);
+    assert(std::abs(result - 25.0) < 1e-10);
+    std::cout << "  [PASS] AutoFreeRunner: square(5.0) == 25.0\n";
+}
+
+void test_auto_free_runner_string() {
+    mexforge::AutoFreeRunner<&free_greet> runner;
+
+    auto engine = make_engine();
+    auto logger = make_logger(engine);
+    matlab::data::ArrayFactory factory;
+    std::vector<matlab::data::Array> args;
+    args.push_back(factory.createScalar(std::string("func")));
+    args.push_back(factory.createScalar(std::string("world")));
+    auto inputs = matlab::mex::ArgumentList(std::move(args));
+    auto outputs = make_single_output();
+
+    runner.run(outputs, inputs, engine, *logger);
+
+    std::string result = mexforge::from_matlab<std::string>(outputs[0]);
+    assert(result == "hello_world");
+    std::cout << "  [PASS] AutoFreeRunner: greet('world') == 'hello_world'\n";
+}
+
+void test_auto_free_runner_void() {
+    mexforge::AutoFreeRunner<&free_noop> runner;
+
+    auto engine = make_engine();
+    auto logger = make_logger(engine);
+    auto inputs = make_free_inputs();  // no args
+    auto outputs = make_no_output();
+
+    // Should not crash
+    runner.run(outputs, inputs, engine, *logger);
+    std::cout << "  [PASS] AutoFreeRunner: void function no crash\n";
+}
+
+// ---- CustomRunner with vector I/O -------------------------------------------
+
+class VectorSumRunner : public mexforge::CustomRunner<Counter> {
+public:
+    using CustomRunner::CustomRunner;
+
+    void execute(Counter& counter, matlab::mex::ArgumentList outputs,
+                 matlab::mex::ArgumentList inputs, matlab::data::ArrayFactory& factory,
+                 mexforge::Logger& /*logger*/) override {
+        auto data = mexforge::from_matlab<std::vector<double>>(inputs[0]);
+        double sum = 0.0;
+        for (double v : data)
+            sum += v;
+        sum += counter.get(); // Add object state
+        outputs[0] = factory.createScalar(sum);
+    }
+};
+
+void test_custom_runner_vector_input() {
+    mexforge::ObjectStore<Counter> store;
+    uint32_t id = static_cast<uint32_t>(store.emplace(int32_t{10}));
+
+    VectorSumRunner runner(store);
+
+    auto engine = make_engine();
+    auto logger = make_logger(engine);
+
+    // Build inputs: [func_name, obj_id, vector_array]
+    matlab::data::ArrayFactory factory;
+    std::vector<matlab::data::Array> args;
+    args.push_back(factory.createScalar(std::string("vec_sum")));
+    args.push_back(factory.createScalar(id));
+    std::vector<double> data = {1.0, 2.0, 3.0, 4.0};
+    auto vec_arr = mexforge::to_matlab(factory, data);
+    args.push_back(vec_arr);
+    auto inputs = matlab::mex::ArgumentList(std::move(args));
+    auto outputs = make_single_output();
+
+    runner.run(outputs, inputs, engine, *logger);
+
+    double result = mexforge::from_matlab<double>(outputs[0]);
+    assert(std::abs(result - 20.0) < 1e-10); // 1+2+3+4 + 10 = 20
+    std::cout << "  [PASS] CustomRunner: vector sum + object state == 20\n";
+}
+
+// ---- Error paths ------------------------------------------------------------
+
+void test_wrong_arg_count_recorded() {
+    mexforge::ObjectStore<Counter> store;
+    uint32_t id = static_cast<uint32_t>(store.emplace(0));
+
+    mexforge::AutoObjectRunner<Counter, &Counter::add> runner(store);
+
+    auto engine = make_engine();
+    auto logger = make_logger(engine);
+
+    // add(a, b) requires 2 args — pass only 1
+    auto inputs = make_inputs(id, int32_t{5}); // only one arg
+    auto outputs = make_no_output();
+
+    runner.run(outputs, inputs, engine, *logger);
+
+    // Mock engine should have recorded an error feval call
+    assert(!engine->calls.empty());
+    std::cout << "  [PASS] wrong arg count -> engine error recorded\n";
+}
+
+void test_invalid_object_id_throws() {
+    mexforge::ObjectStore<Counter> store;
+    // Do NOT emplace anything
+
+    mexforge::AutoObjectRunner<Counter, &Counter::get> runner(store);
+
+    auto engine = make_engine();
+    auto logger = make_logger(engine);
+    auto inputs = make_inputs(uint32_t{99}); // non-existent ID
+    auto outputs = make_single_output();
+
+    bool threw = false;
+    try {
+        runner.run(outputs, inputs, engine, *logger);
+    } catch (const std::runtime_error&) {
+        threw = true;
+    }
+    assert(threw);
+    std::cout << "  [PASS] invalid object ID throws runtime_error\n";
+}
+
 int main() {
     std::cout << "Runner tests:\n";
 
@@ -399,6 +540,15 @@ int main() {
     test_optional_arg_absent();
 
     test_multiple_objects();
+
+    test_auto_free_runner_scalar();
+    test_auto_free_runner_string();
+    test_auto_free_runner_void();
+
+    test_custom_runner_vector_input();
+
+    test_wrong_arg_count_recorded();
+    test_invalid_object_id_throws();
 
     std::cout << "All runner tests passed.\n\n";
     return 0;

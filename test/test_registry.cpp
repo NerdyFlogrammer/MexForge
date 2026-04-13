@@ -137,6 +137,91 @@ void test_empty_registry() {
     std::cout << "  [PASS] empty_registry\n";
 }
 
+// ---- Metadata (.doc()) ------------------------------------------------------
+
+void test_set_and_get_meta() {
+    mexforge::Registry reg;
+    reg.add("my_func", []() { return std::make_unique<MockRunnerA>(); });
+
+    mexforge::FunctionMeta meta;
+    meta.description = "Does something useful";
+    meta.return_type = "double";
+    meta.needs_object = true;
+    meta.args = {{"x", "double", true}, {"y", "double", false}};
+
+    reg.set_meta("my_func", meta);
+
+    assert(reg.has_meta("my_func"));
+    const auto& m = reg.get_meta("my_func");
+    assert(m.description == "Does something useful");
+    assert(m.return_type == "double");
+    assert(m.needs_object == true);
+    assert(m.args.size() == 2);
+    assert(m.args[0].name == "x");
+    assert(m.args[0].type == "double");
+    assert(m.args[0].required == true);
+    assert(m.args[1].name == "y");
+    assert(m.args[1].required == false);
+
+    std::cout << "  [PASS] set_and_get_meta\n";
+}
+
+void test_no_meta_returns_empty() {
+    mexforge::Registry reg;
+    reg.add("no_meta", []() { return std::make_unique<MockRunnerA>(); });
+
+    assert(!reg.has_meta("no_meta"));
+    const auto& m = reg.get_meta("no_meta");
+    assert(m.description.empty());
+    assert(m.args.empty());
+    assert(m.return_type.empty());
+
+    std::cout << "  [PASS] no_meta_returns_empty\n";
+}
+
+void test_list_with_meta() {
+    mexforge::Registry reg;
+    reg.add("a", []() { return std::make_unique<MockRunnerA>(); });
+    reg.add("b", []() { return std::make_unique<MockRunnerA>(); });
+    reg.add("c", []() { return std::make_unique<MockRunnerA>(); });
+
+    mexforge::FunctionMeta m;
+    m.description = "desc";
+    reg.set_meta("a", m);
+    reg.set_meta("c", m);
+
+    auto names = reg.list_with_meta();
+    assert(names.size() == 2);
+
+    bool hasA = false, hasC = false;
+    for (const auto& n : names) {
+        if (n == "a") hasA = true;
+        if (n == "c") hasC = true;
+    }
+    assert(hasA && hasC);
+
+    std::cout << "  [PASS] list_with_meta\n";
+}
+
+void test_needs_object_flag() {
+    mexforge::Registry reg;
+    reg.add("obj_func", []() { return std::make_unique<MockRunnerA>(); });
+    reg.add("free_func", []() { return std::make_unique<MockRunnerA>(); });
+
+    mexforge::FunctionMeta obj_meta;
+    obj_meta.needs_object = true;
+    reg.set_meta("obj_func", obj_meta);
+
+    mexforge::FunctionMeta free_meta;
+    free_meta.needs_object = false;
+    reg.set_meta("free_func", free_meta);
+
+    assert(reg.get_meta("obj_func").needs_object == true);
+    assert(reg.get_meta("free_func").needs_object == false);
+
+    std::cout << "  [PASS] needs_object_flag\n";
+}
+
 int main() {
     std::cout << "Registry tests:\n";
     test_add_and_exists();
@@ -146,6 +231,10 @@ int main() {
     test_list();
     test_overwrite();
     test_empty_registry();
+    test_set_and_get_meta();
+    test_no_meta_returns_empty();
+    test_list_with_meta();
+    test_needs_object_flag();
     std::cout << "All Registry tests passed.\n\n";
     return 0;
 }

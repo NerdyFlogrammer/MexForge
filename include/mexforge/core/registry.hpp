@@ -85,14 +85,11 @@ public:
         return names;
     }
 
+    // Returns names of all functions that have metadata attached via set_meta().
     [[nodiscard]] std::vector<std::string> list_with_meta() const {
         std::vector<std::string> names;
-        names.reserve(factories_.size());
-        for (const auto& [name, _] : factories_) {
-            // Skip internal commands
-            if (name.empty() || name[0] == '_') {
-                continue;
-            }
+        names.reserve(meta_.size());
+        for (const auto& [name, _] : meta_) {
             names.push_back(name);
         }
         return names;

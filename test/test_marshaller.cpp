@@ -205,6 +205,87 @@ void test_large_values() {
     std::cout << "  [PASS] large values\n";
 }
 
+// ---- std::vector round-trips ------------------------------------------------
+
+void test_vector_double_roundtrip() {
+    const std::vector<double> in = {1.0, 2.0, 3.0, 4.0, 5.0};
+    auto arr = mexforge::to_matlab(factory, in);
+    assert(arr.getNumberOfElements() == 5);
+    auto out = mexforge::from_matlab<std::vector<double>>(arr);
+    assert(out.size() == in.size());
+    for (size_t i = 0; i < in.size(); ++i)
+        assert(std::abs(out[i] - in[i]) < 1e-10);
+    std::cout << "  [PASS] vector<double> round-trip\n";
+}
+
+void test_vector_int32_roundtrip() {
+    const std::vector<int32_t> in = {-10, 0, 7, 42, -1};
+    auto arr = mexforge::to_matlab(factory, in);
+    assert(arr.getNumberOfElements() == 5);
+    auto out = mexforge::from_matlab<std::vector<int32_t>>(arr);
+    assert(out.size() == in.size());
+    for (size_t i = 0; i < in.size(); ++i)
+        assert(out[i] == in[i]);
+    std::cout << "  [PASS] vector<int32_t> round-trip\n";
+}
+
+void test_vector_single_element() {
+    const std::vector<double> in = {3.14};
+    auto arr = mexforge::to_matlab(factory, in);
+    auto out = mexforge::from_matlab<std::vector<double>>(arr);
+    assert(out.size() == 1);
+    assert(std::abs(out[0] - 3.14) < 1e-10);
+    std::cout << "  [PASS] vector single element\n";
+}
+
+void test_vector_empty() {
+    const std::vector<double> in = {};
+    auto arr = mexforge::to_matlab(factory, in);
+    assert(arr.getNumberOfElements() == 0);
+    auto out = mexforge::from_matlab<std::vector<double>>(arr);
+    assert(out.empty());
+    std::cout << "  [PASS] vector empty\n";
+}
+
+void test_vector_string_roundtrip() {
+    const std::vector<std::string> in = {"alpha", "beta", "gamma"};
+    auto arr = mexforge::to_matlab(factory, in);
+    assert(arr.getNumberOfElements() == 3);
+    auto out = mexforge::from_matlab<std::vector<std::string>>(arr);
+    assert(out.size() == in.size());
+    for (size_t i = 0; i < in.size(); ++i)
+        assert(out[i] == in[i]);
+    std::cout << "  [PASS] vector<string> round-trip\n";
+}
+
+// ---- std::complex round-trips -----------------------------------------------
+
+void test_complex_double_roundtrip() {
+    const std::complex<double> in = {3.0, 4.0};
+    auto arr = mexforge::to_matlab(factory, in);
+    auto out = mexforge::from_matlab<std::complex<double>>(arr);
+    assert(std::abs(out.real() - 3.0) < 1e-10);
+    assert(std::abs(out.imag() - 4.0) < 1e-10);
+    std::cout << "  [PASS] complex<double> round-trip\n";
+}
+
+void test_complex_float_roundtrip() {
+    const std::complex<float> in = {1.5f, -2.5f};
+    auto arr = mexforge::to_matlab(factory, in);
+    auto out = mexforge::from_matlab<std::complex<float>>(arr);
+    assert(std::abs(out.real() - 1.5f) < 1e-5f);
+    assert(std::abs(out.imag() - (-2.5f)) < 1e-5f);
+    std::cout << "  [PASS] complex<float> round-trip\n";
+}
+
+void test_complex_zero() {
+    const std::complex<double> in = {0.0, 0.0};
+    auto arr = mexforge::to_matlab(factory, in);
+    auto out = mexforge::from_matlab<std::complex<double>>(arr);
+    assert(out.real() == 0.0 && out.imag() == 0.0);
+    std::cout << "  [PASS] complex zero\n";
+}
+
 int main() {
     std::cout << "Marshaller tests:\n";
 
@@ -235,6 +316,16 @@ int main() {
     test_zero_values();
     test_negative_values();
     test_large_values();
+
+    test_vector_double_roundtrip();
+    test_vector_int32_roundtrip();
+    test_vector_single_element();
+    test_vector_empty();
+    test_vector_string_roundtrip();
+
+    test_complex_double_roundtrip();
+    test_complex_float_roundtrip();
+    test_complex_zero();
 
     std::cout << "All marshaller tests passed.\n\n";
     return 0;

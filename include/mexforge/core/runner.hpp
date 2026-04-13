@@ -50,9 +50,13 @@ template<typename Tuple, size_t... Is> constexpr size_t count_required(std::inde
     return count;
 }
 
-inline void validate_arg_count(size_t provided, size_t required, size_t total,
-                               const std::string& funcName,
-                               const std::shared_ptr<matlab::engine::MATLABEngine>& engine) {
+// Returns true if the argument count is valid, false if an error was reported.
+// In production MATLAB, engine->feval("error", ...) throws immediately so the
+// false return is never reached. In tests the mock does not throw, so callers
+// must check the return value and return early to avoid out-of-bounds access.
+inline bool validate_arg_count(size_t provided, size_t required, size_t total,
+                                const std::string& funcName,
+                                const std::shared_ptr<matlab::engine::MATLABEngine>& engine) {
     if (provided < required || provided > total) {
         std::ostringstream oss;
         oss << "MexForge: '" << funcName << "' expects ";
@@ -66,7 +70,9 @@ inline void validate_arg_count(size_t provided, size_t required, size_t total,
         engine->feval(
             u"error",
             {factory.createScalar("mexforge:invalidArgs"), factory.createScalar(oss.str())}, {});
+        return false;
     }
+    return true;
 }
 
 // Unmarshal arguments from MATLAB into a std::tuple
@@ -155,8 +161,9 @@ public:
              const std::shared_ptr<matlab::engine::MATLABEngine>& engine, Logger& logger) override {
         // inputs[0] = function name (string), inputs[1] = object ID (uint32)
         // inputs[2..] = actual arguments
-        detail::validate_arg_count(inputs.size() - 2, RequiredArgs, NumArgs,
-                                   std::string("auto_method"), engine);
+        if (!detail::validate_arg_count(inputs.size() - 2, RequiredArgs, NumArgs,
+                                        std::string("auto_method"), engine))
+            return;
 
         uint32_t objId = FromMatlab<uint32_t>::convert(inputs[1]);
         auto& obj = store_.get_ref(objId);
@@ -198,8 +205,9 @@ public:
     void run(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs,
              const std::shared_ptr<matlab::engine::MATLABEngine>& engine, Logger& logger) override {
         // inputs[0] = function name, inputs[1..] = arguments
-        detail::validate_arg_count(inputs.size() - 1, RequiredArgs, NumArgs,
-                                   std::string("free_function"), engine);
+        if (!detail::validate_arg_count(inputs.size() - 1, RequiredArgs, NumArgs,
+                                        std::string("free_function"), engine))
+            return;
 
         auto userInputs =
             matlab::mex::ArgumentList(inputs.begin() + 1, inputs.end(), inputs.size() - 1);
@@ -246,8 +254,9 @@ public:
 
     void run(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs,
              const std::shared_ptr<matlab::engine::MATLABEngine>& engine, Logger& logger) override {
-        detail::validate_arg_count(inputs.size() - 2, RequiredArgs, NumArgs,
-                                   std::string("lambda_method"), engine);
+        if (!detail::validate_arg_count(inputs.size() - 2, RequiredArgs, NumArgs,
+                                        std::string("lambda_method"), engine))
+            return;
 
         uint32_t objId = FromMatlab<uint32_t>::convert(inputs[1]);
         auto& obj = store_.get_ref(objId);
@@ -290,8 +299,9 @@ public:
 
     void run(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs,
              const std::shared_ptr<matlab::engine::MATLABEngine>& engine, Logger& logger) override {
-        detail::validate_arg_count(inputs.size() - 1, RequiredArgs, NumArgs,
-                                   std::string("lambda_free"), engine);
+        if (!detail::validate_arg_count(inputs.size() - 1, RequiredArgs, NumArgs,
+                                        std::string("lambda_free"), engine))
+            return;
 
         (void)logger; // Not used in auto-dispatch
 
