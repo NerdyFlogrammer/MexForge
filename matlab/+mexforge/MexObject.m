@@ -187,7 +187,7 @@ classdef MexObject < handle & matlab.mixin.CustomDisplay
     methods (Hidden)
         function varargout = subsref(obj, s)
             if numel(s) >= 2 && strcmp(s(1).type, '.') && strcmp(s(2).type, '()')
-                methodName = s(1).subs;
+                methodName = string(s(1).subs);  % s(1).subs is char; MEX expects string
 
                 % Check if this is a registered MEX method
                 if obj.methodSet_.isKey(methodName)
@@ -209,7 +209,7 @@ classdef MexObject < handle & matlab.mixin.CustomDisplay
 
             % Property access or built-in methods
             if numel(s) == 1 && strcmp(s(1).type, '.')
-                methodName = s(1).subs;
+                methodName = string(s(1).subs);  % s(1).subs is char; MEX expects string
                 if obj.methodSet_.isKey(methodName)
                     % Method referenced without () — return function handle
                     varargout{1} = @(varargin) obj.callMethod(methodName, varargin{:});

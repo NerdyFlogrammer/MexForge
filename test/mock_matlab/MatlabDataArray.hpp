@@ -171,6 +171,26 @@ public:
 };
 
 // ============================================================================
+// CharArray: represents MATLAB char arrays
+// ============================================================================
+
+class CharArray : public Array {
+public:
+    CharArray() = default;
+    CharArray(const Array& arr) : Array(arr) {}
+
+    // In the mock, char arrays are stored as std::string (same as string arrays)
+    std::string toAscii() const {
+        if (stored_value().has_value()) {
+            try {
+                return std::any_cast<std::string>(stored_value());
+            } catch (...) {}
+        }
+        return "";
+    }
+};
+
+// ============================================================================
 // StructArray: supports field read/write for __arg_info testing
 // ============================================================================
 
