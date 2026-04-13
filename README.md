@@ -4,7 +4,7 @@
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
 [![Header Only](https://img.shields.io/badge/header--only-yes-green.svg)]()
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19560403.svg)](https://doi.org/10.5281/zenodo.19560403)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.19560403-blue.svg)](https://doi.org/10.5281/zenodo.19560403)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-orange.svg)](https://buymeacoffee.com/nerdyflogrammer)
 
 **A header-only C++17 library for creating MATLAB MEX interfaces with minimal boilerplate.**
