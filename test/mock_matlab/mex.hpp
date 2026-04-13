@@ -35,31 +35,36 @@ public:
 
 namespace mex {
 
-// Functional ArgumentList backed by a vector
+// Functional ArgumentList backed by shared storage.
+//
+// In the real MATLAB C++ API, ArgumentList is a reference-counted proxy — copies
+// refer to the same underlying arrays. The mock mirrors this via shared_ptr so
+// that writes through a by-value copy (as in runner::run()) are visible to the
+// caller's ArgumentList instance.
 class ArgumentList {
 public:
-    ArgumentList() = default;
+    ArgumentList() : data_(std::make_shared<std::vector<matlab::data::Array>>()) {}
 
     explicit ArgumentList(std::vector<matlab::data::Array> data)
-        : data_(std::move(data)) {}
+        : data_(std::make_shared<std::vector<matlab::data::Array>>(std::move(data))) {}
 
     ArgumentList(
         const matlab::data::Array* begin,
         const matlab::data::Array* end,
         size_t /*size*/)
-        : data_(begin, end) {}
+        : data_(std::make_shared<std::vector<matlab::data::Array>>(begin, end)) {}
 
-    matlab::data::Array& operator[](size_t i) { return data_[i]; }
-    const matlab::data::Array& operator[](size_t i) const { return data_[i]; }
+    matlab::data::Array& operator[](size_t i) { return (*data_)[i]; }
+    const matlab::data::Array& operator[](size_t i) const { return (*data_)[i]; }
 
-    size_t size() const { return data_.size(); }
-    bool empty() const { return data_.empty(); }
+    size_t size() const { return data_->size(); }
+    bool empty() const { return data_->empty(); }
 
-    const matlab::data::Array* begin() const { return data_.data(); }
-    const matlab::data::Array* end() const { return data_.data() + data_.size(); }
+    const matlab::data::Array* begin() const { return data_->data(); }
+    const matlab::data::Array* end() const { return data_->data() + data_->size(); }
 
 private:
-    std::vector<matlab::data::Array> data_;
+    std::shared_ptr<std::vector<matlab::data::Array>> data_;
 };
 
 class Function {
