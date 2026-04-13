@@ -1,0 +1,16 @@
+build/
+.cache/
+*.mexa64
+*.mexmaci64
+*.mexmaca64
+*.mexw64
+compile_commands.json
+.vscode/
+.idea/
+
+# Test binaries
+test/test_types
+test/test_method_traits
+test/test_object_store
+test/test_logger
+test/test_registry

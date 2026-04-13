@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            compiler: g++
+          - os: macos-latest
+            compiler: clang++
+          - os: windows-latest
+            compiler: cl
+
+    runs-on: ${{ matrix.os }}
+    name: Test (${{ matrix.os }})
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and run tests (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          ${{ matrix.compiler }} -std=c++17 -Wall -Wextra -Wpedantic -I include -I test/mock_matlab -o test_types test/test_types.cpp
+          ${{ matrix.compiler }} -std=c++17 -Wall -Wextra -Wpedantic -I include -I test/mock_matlab -o test_method_traits test/test_method_traits.cpp
+          ${{ matrix.compiler }} -std=c++17 -Wall -Wextra -Wpedantic -I include -o test_object_store test/test_object_store.cpp
+          ${{ matrix.compiler }} -std=c++17 -Wall -Wextra -Wpedantic -I include -I test/mock_matlab -o test_logger test/test_logger.cpp
+          ${{ matrix.compiler }} -std=c++17 -Wall -Wextra -Wpedantic -I include -I test/mock_matlab -o test_registry test/test_registry.cpp
+          ./test_types
+          ./test_method_traits
+          ./test_object_store
+          ./test_logger
+          ./test_registry
+
+      - name: Build and run tests (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          cl /std:c++17 /W4 /EHsc /I include /I test\mock_matlab /Fe:test_types.exe test\test_types.cpp
+          cl /std:c++17 /W4 /EHsc /I include /I test\mock_matlab /Fe:test_method_traits.exe test\test_method_traits.cpp
+          cl /std:c++17 /W4 /EHsc /I include /Fe:test_object_store.exe test\test_object_store.cpp
+          cl /std:c++17 /W4 /EHsc /I include /I test\mock_matlab /Fe:test_logger.exe test\test_logger.cpp
+          cl /std:c++17 /W4 /EHsc /I include /I test\mock_matlab /Fe:test_registry.exe test\test_registry.cpp
+          test_types.exe
+          test_method_traits.exe
+          test_object_store.exe
+          test_logger.exe
+          test_registry.exe
+
+      - name: Syntax check example bindings
+        if: runner.os != 'Windows'
+        run: |
+          ${{ matrix.compiler }} -std=c++17 -fsyntax-only -Wall -Wextra -Wpedantic -I include -I test/mock_matlab examples/simple_math/bindings.cpp
+
+  clang-tidy:
+    runs-on: ubuntu-latest
+    name: clang-tidy
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-tidy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy
+
+      - name: Run clang-tidy on library headers
+        run: |
+          find include/mexforge/core -name '*.hpp' | while read f; do
+            echo "=== Checking $f ==="
+            clang-tidy "$f" \
+              -p . \
+              --quiet \
+              -- -std=c++17 -I include -I test/mock_matlab -x c++-header \
+              || exit 1
+          done
+
+      - name: Run clang-tidy on example
+        run: |
+          clang-tidy examples/simple_math/bindings.cpp \
+            -p . \
+            --quiet \
+            -- -std=c++17 -I include -I test/mock_matlab
+
+  clang-format:
+    runs-on: ubuntu-latest
+    name: clang-format
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+
+      - name: Check formatting
+        run: |
+          find include examples/simple_math -name '*.hpp' -o -name '*.cpp' | while read f; do
+            clang-format --dry-run --Werror "$f" || exit 1
+          done
+          echo "All files formatted correctly."
+
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint & Headers
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check include guards
+        run: |
+          for f in $(find include -name '*.hpp'); do
+            guard=$(head -5 "$f" | grep -c '#ifndef')
+            if [ "$guard" -eq 0 ]; then
+              echo "MISSING include guard: $f"
+              exit 1
+            fi
+          done
+          echo "All include guards present."
+
+      - name: Check no pragma once
+        run: |
+          if grep -r 'pragma once' include/; then
+            echo "Found pragma once — use include guards instead."
+            exit 1
+          fi
+          echo "No pragma once found."

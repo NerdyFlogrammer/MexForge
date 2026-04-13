@@ -1,0 +1,250 @@
+# MexForge
+
+[![CI](https://github.com/nerdyflogrammer/MexForge/actions/workflows/ci.yml/badge.svg)](https://github.com/nerdyflogrammer/MexForge/actions/workflows/ci.yml)
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
+[![Header Only](https://img.shields.io/badge/header--only-yes-green.svg)]()
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-orange.svg)](https://buymeacoffee.com/nerdyflogrammer)
+
+**A header-only C++17 library for creating MATLAB MEX interfaces with minimal boilerplate.**
+
+MexForge turns the tedious process of wrapping C++ libraries for MATLAB into a declarative, type-safe, and largely automatic workflow. Instead of writing hundreds of boilerplate classes, you declare bindings in a few lines — the library handles argument marshalling, type validation, object lifecycle, and error reporting at compile time.
+
+---
+
+## Origin
+
+This project builds on ideas from my master's thesis at Darmstadt University of Applied Sciences (h_da) in 2020. Back then, I needed a MEX interface for a specific C++ library (the [Ettus Research UHD](https://github.com/EttusResearch/uhd) driver for Software Defined Radio hardware) and ended up building a semi-generic abstraction layer around it — a factory pattern with template-based argument validation that made it possible to expose 200+ C++ functions to MATLAB with relatively little per-function code.
+
+That project ([MatlabUhdApi](https://github.com/nerdyflogrammer/MatlabUhdApi)) worked, but the generic parts were still entangled with the UHD-specific code. MexForge is the evolution of that idea: a **standalone, library-agnostic framework** that lets you wrap *any* C++ library for MATLAB, using modern C++17 metaprogramming to push as much work as possible to compile time.
+
+---
+
+## Features
+
+- **Three binding tiers** — from zero-boilerplate to full control
+- **Compile-time signature extraction** — argument types derived automatically from method pointers
+- **Automatic marshalling** — bidirectional conversion between MATLAB and C++ types via `if constexpr`
+- **Generic object store** — manage multiple instances of your wrapped class with `unique_ptr` ownership
+- **Configurable logging** — compile-time elimination, runtime level control, buffered MATLAB output, file logging
+- **Built-in control commands** — log level, function listing, store management — all callable from MATLAB
+- **Header-only** — no build step for the library itself, just `#include` and go
+- **Cross-platform** — Windows (MSVC), macOS (Clang/Xcode), Linux (GCC)
+- **Pure C++17** — no compiler extensions, no `#pragma once`, standard include guards
+
+---
+
+## Quick Start
+
+### 1. Your C++ library (no MATLAB dependency)
+
+```cpp
+class Calculator {
+public:
+    explicit Calculator(const std::string& name) : name_(name) {}
+    std::string getName() const { return name_; }
+    double add(double a, double b) const { return a + b; }
+    double power(double base, double exp) const { return std::pow(base, exp); }
+private:
+    std::string name_;
+};
+```
+
+### 2. MexForge bindings (one file)
+
+```cpp
+#include <mexforge/mexforge.hpp>
+#include "calculator.hpp"
+
+class CalcMex : public mexforge::MexGateway<Calculator> {
+protected:
+    void setup(mexforge::RegistryBuilder<Calculator>& b) override {
+
+        // Lifecycle
+        b.bind_free_lambda<std::string>("create",
+            [this](std::string name) -> uint32_t {
+                return static_cast<uint32_t>(store().emplace(name));
+            })
+         .bind_free_lambda<uint32_t>("destroy",
+            [this](uint32_t id) { store().remove(static_cast<int>(id)); })
+
+        // Tier 1: Auto-bind — one line, zero boilerplate
+         .bind_auto<&Calculator::getName>("get_name")
+         .bind_auto<&Calculator::add>("add")
+         .bind_auto<&Calculator::power>("power");
+    }
+};
+
+MEX_ENTRY(CalcMex)
+```
+
+### 3. Build
+
+```matlab
+mex -I<path-to-mexforge>/include CXXFLAGS='$CXXFLAGS -std=c++17' bindings.cpp
+```
+
+### 4. Use from MATLAB
+
+```matlab
+id = bindings("create", "myCalc");
+bindings("get_name", id)       % "myCalc"
+bindings("add", id, 2, 3)     % 5
+bindings("power", id, 2, 10)  % 1024
+bindings("destroy", id);
+```
+
+---
+
+## Binding Tiers
+
+### Tier 1: `bind_auto` — Automatic 1:1 binding
+
+Extracts the method signature at compile time. Arguments are marshalled automatically. No code to write.
+
+```cpp
+b.bind_auto<&MyClass::getRate>("get_rate");
+b.bind_auto<&MyClass::setRate>("set_rate");
+```
+
+### Tier 2: `bind_lambda` — Custom logic with auto-marshalling
+
+For methods that need argument transformation, optional parameter handling, or combining multiple calls.
+
+```cpp
+b.bind_lambda<double, double, std::string>("compute",
+    [](MyClass& obj, double a, double b, std::string op) -> double {
+        return obj.compute(a, b, op);
+    });
+```
+
+### Tier 3: `bind_custom` — Full control
+
+Subclass `CustomRunner<T>` for complex scenarios like buffer handling, dynamic type dispatch, or multi-output functions.
+
+```cpp
+class StreamHandler : public mexforge::CustomRunner<MyDevice> {
+    void execute(MyDevice& dev,
+                 matlab::mex::ArgumentList outputs,
+                 matlab::mex::ArgumentList inputs,
+                 matlab::data::ArrayFactory& factory,
+                 mexforge::Logger& logger) override
+    {
+        // Full access to raw MATLAB arrays
+    }
+};
+
+b.bind_custom<StreamHandler>("stream");
+```
+
+---
+
+## Logging
+
+MexForge includes a logging system with compile-time elimination and runtime control.
+
+```matlab
+% Control from MATLAB
+bindings("__log_level", "debug");      % Set runtime level
+bindings("__log_level", "off");        % Disable (~1ns per call)
+bindings("__log_file", "debug.log");   % Log to file (fast, no MATLAB roundtrip)
+bindings("__log_matlab", false);       % Disable MATLAB console output
+bindings("__log_buffer", true);        % Buffer mode: collect, flush once
+bindings("__log_flush");               % Flush buffered messages
+```
+
+| Mode | Overhead | MATLAB controllable |
+|---|---|---|
+| Compile-time off | Zero (code eliminated) | No (build flag) |
+| Runtime off | ~1ns (`if` check) | `__log_level`, `"off"` |
+| File only | ~1 us | `__log_matlab`, `false` |
+| Buffered MATLAB | ~1 us + flush | `__log_buffer`, `true` |
+| Direct MATLAB | ~100 us/msg | Default |
+
+Compile-time minimum level via build flag:
+
+```
+-DMEXFORGE_MIN_LOG_LEVEL=2   # Strip trace (0) and debug (1) from binary
+```
+
+---
+
+## Built-in Control Commands
+
+Every MexForge library automatically supports:
+
+| Command | Description |
+|---|---|
+| `__log_level` | Get/set runtime log level |
+| `__log_file` | Enable file logging |
+| `__log_matlab` | Enable/disable MATLAB console output |
+| `__log_buffer` | Enable/disable buffered logging |
+| `__log_flush` | Flush buffered log messages |
+| `__list_functions` | List all registered function names |
+| `__store_clear` | Clear all stored objects |
+| `__store_size` | Get number of stored objects |
+
+---
+
+## Type Mapping
+
+| C++ Type | MATLAB Type | Automatic |
+|---|---|---|
+| `double`, `float` | `double`, `single` | Yes |
+| `int32_t`, `uint32_t`, `int64_t`, `uint64_t` | `int32`, `uint32`, `int64`, `uint64` | Yes |
+| `bool` | `logical` | Yes |
+| `std::string` | `string` | Yes |
+| `std::complex<T>` | `complex` | Yes |
+| `std::vector<T>` | Array | Yes |
+| `std::optional<T>` | Optional argument | Yes |
+| Custom structs | `struct` | Via `StructMarshaller<T>` specialization |
+
+---
+
+## Project Structure
+
+```
+MexForge/
+├── include/mexforge/
+│   ├── mexforge.hpp              # Main include
+│   └── core/
+│       ├── types.hpp             # Type traits, optional/vector detection
+│       ├── marshaller.hpp        # MATLAB <-> C++ conversion
+│       ├── method_traits.hpp     # Compile-time signature extraction
+│       ├── object_store.hpp      # Generic object lifecycle (unique_ptr)
+│       ├── logger.hpp            # Multi-level logging system
+│       ├── runner.hpp            # Tier 1/2/3 runners
+│       ├── registry.hpp          # Function registry + fluent builder
+│       └── gateway.hpp           # MEX entry point + control commands
+├── test/
+│   ├── mock_matlab/              # Mock MATLAB headers for testing without MATLAB
+│   ├── test_types.cpp
+│   ├── test_method_traits.cpp
+│   ├── test_object_store.cpp
+│   └── test_logger.cpp
+├── examples/simple_math/         # Complete working example
+│   ├── math_lib.hpp              # Pure C++ library
+│   ├── bindings.cpp              # MexForge bindings (all 3 tiers)
+│   ├── make.m                    # MATLAB build script
+│   └── matlab/+math/calculator.m # MATLAB wrapper class
+└── CMakeLists.txt
+```
+
+---
+
+## Requirements
+
+- **C++17** compiler (MSVC 2017+, GCC 8+, Clang/Xcode 15+)
+- **MATLAB R2018b+** (for building MEX files — not needed for running tests)
+
+---
+
+## Support
+
+If MexForge saves you time, consider supporting the project:
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://buymeacoffee.com/nerdyflogrammer)
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE)
