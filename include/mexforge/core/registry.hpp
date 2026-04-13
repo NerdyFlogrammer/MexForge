@@ -140,9 +140,8 @@ public:
     // factory lambda is called later.
     template<auto MethodPtr> RegistryBuilder& bind_auto(const std::string& name) {
         auto* s = &store_;
-        registry_.add(name, [s]() {
-            return std::make_unique<AutoObjectRunner<ObjType, MethodPtr>>(*s);
-        });
+        registry_.add(name,
+                      [s]() { return std::make_unique<AutoObjectRunner<ObjType, MethodPtr>>(*s); });
         lastBound_ = name;
         lastBoundNeedsObject_ = true;
         return *this;
@@ -162,8 +161,8 @@ public:
         auto* s = &store_;
         auto fn = std::make_shared<std::decay_t<Func>>(std::forward<Func>(func));
         registry_.add(name, [s, fn]() {
-            return std::make_unique<LambdaObjectRunner<ObjType, std::decay_t<Func>, Args...>>(
-                *s, *fn);
+            return std::make_unique<LambdaObjectRunner<ObjType, std::decay_t<Func>, Args...>>(*s,
+                                                                                              *fn);
         });
         lastBound_ = name;
         lastBoundNeedsObject_ = true;
