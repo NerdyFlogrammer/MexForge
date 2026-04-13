@@ -55,8 +55,8 @@ template<typename Tuple, size_t... Is> constexpr size_t count_required(std::inde
 // false return is never reached. In tests the mock does not throw, so callers
 // must check the return value and return early to avoid out-of-bounds access.
 inline bool validate_arg_count(size_t provided, size_t required, size_t total,
-                                const std::string& funcName,
-                                const std::shared_ptr<matlab::engine::MATLABEngine>& engine) {
+                               const std::string& funcName,
+                               const std::shared_ptr<matlab::engine::MATLABEngine>& engine) {
     if (provided < required || provided > total) {
         std::ostringstream oss;
         oss << "MexForge: '" << funcName << "' expects ";

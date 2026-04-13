@@ -36,9 +36,13 @@ template<> struct FromMatlab<bool> {
     }
 };
 
-// std::string
+// std::string — accepts both MATLAB string and char arrays
 template<> struct FromMatlab<std::string> {
     static std::string convert(const matlab::data::Array& arr) {
+        if (arr.getType() == matlab::data::ArrayType::CHAR) {
+            const matlab::data::CharArray charArr = arr;
+            return charArr.toAscii();
+        }
         const matlab::data::StringArray strArr = arr;
         return std::string(strArr[0]);
     }
