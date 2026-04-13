@@ -1,6 +1,7 @@
 #ifndef MEXFORGE_CORE_METHOD_TRAITS_HPP
 #define MEXFORGE_CORE_METHOD_TRAITS_HPP
 
+#include <cstddef>
 #include <tuple>
 #include <type_traits>
 
