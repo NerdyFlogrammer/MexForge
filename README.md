@@ -86,12 +86,23 @@ mex -I<path-to-mexforge>/include CXXFLAGS='$CXXFLAGS -std=c++17' bindings.cpp
 
 ### 4. Use from MATLAB
 
+**Option A: Raw MEX calls**
 ```matlab
 id = bindings("create", "myCalc");
 bindings("get_name", id)       % "myCalc"
 bindings("add", id, 2, 3)     % 5
 bindings("power", id, 2, 10)  % 1024
 bindings("destroy", id);
+```
+
+**Option B: Dynamic MexObject (no MATLAB wrapper code needed)**
+```matlab
+calc = mexforge.MexObject(@bindings, "myCalc");
+calc.add(2, 3)                % 5 — auto-dispatched to C++
+calc.power(2, 10)             % 1024
+calc.availableMethods()       % list all methods with descriptions
+calc.showHelp("add")          % show args, types, return type
+clear calc;                   % automatic cleanup
 ```
 
 ---
@@ -136,6 +147,45 @@ class StreamHandler : public mexforge::CustomRunner<MyDevice> {
 
 b.bind_custom<StreamHandler>("stream");
 ```
+
+---
+
+## Dynamic MexObject
+
+`mexforge.MexObject` is a generic MATLAB class that wraps **any** MexForge library without writing a single line of MATLAB wrapper code. The C++ bindings define the interface — MATLAB discovers it at runtime.
+
+```matlab
+% Works with ANY MexForge library — no per-library .m file needed
+obj = mexforge.MexObject(@my_mex_lib, constructor_args...);
+
+% Methods are dispatched dynamically to C++
+obj.someMethod(arg1, arg2);
+
+% Introspection
+obj.availableMethods()        % List all methods with descriptions
+obj.showHelp("someMethod")    % Show args, types, return type
+
+% Tab-completion support
+mexforge.generate_signatures(@my_mex_lib);  % Generate autocomplete JSON
+```
+
+### Documentation via `.doc()`
+
+Add metadata to your C++ bindings for help texts and type checking:
+
+```cpp
+b.bind_auto<&MyClass::setRate>("set_rate")
+    .doc("Set the sample rate in Hz",
+         {{"rate", "double", true}, {"channel", "int32", false}})
+
+ .bind_auto<&MyClass::getRate>("get_rate")
+    .doc("Get the current sample rate", {}, "double");
+```
+
+This enables:
+- `obj.showHelp("set_rate")` → shows description, args, types
+- `obj.checkArgs("set_rate", ...)` → validates before MEX call
+- `mexforge.generate_signatures(...)` → tab-completion in MATLAB editor
 
 ---
 
@@ -214,19 +264,25 @@ MexForge/
 │       ├── object_store.hpp      # Generic object lifecycle (unique_ptr)
 │       ├── logger.hpp            # Multi-level logging system
 │       ├── runner.hpp            # Tier 1/2/3 runners
-│       ├── registry.hpp          # Function registry + fluent builder
+│       ├── registry.hpp          # Function registry + metadata + fluent builder
 │       └── gateway.hpp           # MEX entry point + control commands
+├── matlab/+mexforge/
+│   ├── MexObject.m               # Dynamic wrapper (no per-library code needed)
+│   └── generate_signatures.m     # Tab-completion generator
 ├── test/
 │   ├── mock_matlab/              # Mock MATLAB headers for testing without MATLAB
 │   ├── test_types.cpp
 │   ├── test_method_traits.cpp
 │   ├── test_object_store.cpp
-│   └── test_logger.cpp
+│   ├── test_logger.cpp
+│   └── test_registry.cpp
 ├── examples/simple_math/         # Complete working example
 │   ├── math_lib.hpp              # Pure C++ library
-│   ├── bindings.cpp              # MexForge bindings (all 3 tiers)
-│   ├── make.m                    # MATLAB build script
-│   └── matlab/+math/calculator.m # MATLAB wrapper class
+│   ├── bindings.cpp              # MexForge bindings (all 3 tiers + metadata)
+│   ├── make.m                    # MATLAB build script (cross-platform)
+│   └── matlab/
+│       ├── +math/calculator.m    # Traditional wrapper (optional)
+│       └── demo_dynamic.m        # Dynamic MexObject demo
 └── CMakeLists.txt
 ```
 

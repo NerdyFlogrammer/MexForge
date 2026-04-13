@@ -8,11 +8,29 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace mexforge {
 
 // ============================================================================
-// Registry: Maps function names to runner factories
+// Function metadata for introspection, help texts, and type checking
+// ============================================================================
+
+struct ArgMeta {
+    std::string name;
+    std::string type; // "double", "string", "int32", "struct", etc.
+    bool required = true;
+};
+
+struct FunctionMeta {
+    std::string description;
+    std::vector<ArgMeta> args;
+    std::string return_type;
+    bool needs_object = true;
+};
+
+// ============================================================================
+// Registry: Maps function names to runner factories + metadata
 //
 // Lazy instantiation — runners are created on first call, then cached.
 // ============================================================================
@@ -23,8 +41,20 @@ public:
 
     void add(const std::string& name, Factory factory) { factories_[name] = std::move(factory); }
 
+    void set_meta(const std::string& name, FunctionMeta meta) { meta_[name] = std::move(meta); }
+
     [[nodiscard]] bool exists(const std::string& name) const {
         return factories_.find(name) != factories_.end();
+    }
+
+    [[nodiscard]] bool has_meta(const std::string& name) const {
+        return meta_.find(name) != meta_.end();
+    }
+
+    [[nodiscard]] const FunctionMeta& get_meta(const std::string& name) const {
+        static const FunctionMeta empty{};
+        auto it = meta_.find(name);
+        return (it != meta_.end()) ? it->second : empty;
     }
 
     // Returns non-owning reference. Registry owns the runner lifetime.
@@ -46,10 +76,23 @@ public:
         return *cached;
     }
 
-    std::vector<std::string> list() const {
+    [[nodiscard]] std::vector<std::string> list() const {
         std::vector<std::string> names;
         names.reserve(factories_.size());
         for (const auto& [name, _] : factories_) {
+            names.push_back(name);
+        }
+        return names;
+    }
+
+    [[nodiscard]] std::vector<std::string> list_with_meta() const {
+        std::vector<std::string> names;
+        names.reserve(factories_.size());
+        for (const auto& [name, _] : factories_) {
+            // Skip internal commands
+            if (name.empty() || name[0] == '_') {
+                continue;
+            }
             names.push_back(name);
         }
         return names;
@@ -60,19 +103,18 @@ public:
 private:
     std::unordered_map<std::string, Factory> factories_;
     std::unordered_map<std::string, std::unique_ptr<RunnerBase>> cache_;
+    std::unordered_map<std::string, FunctionMeta> meta_;
 };
 
 // ============================================================================
-// RegistryBuilder: Fluent API for building the registry
+// RegistryBuilder: Fluent API for building the registry with metadata
 //
 // Usage:
-//   auto registry = RegistryBuilder<MyClass>(store)
+//   RegistryBuilder<MyClass>(store)
 //       .bind_auto<&MyClass::getRate>("get_rate")
+//           .doc("Get the current sample rate", {{"chan", "int32", false}}, "double")
 //       .bind_auto<&MyClass::setRate>("set_rate")
-//       .bind_lambda<double, std::optional<int>>("compute",
-//           [](MyClass& obj, double x, std::optional<int> mode) { ... })
-//       .bind_custom<MyStreamHandler>("stream")
-//       .bind_free<&freeFunction>("find_devices")
+//           .doc("Set the sample rate", {{"rate", "double"}, {"chan", "int32", false}})
 //       .build();
 // ============================================================================
 
@@ -80,22 +122,40 @@ template<typename ObjType> class RegistryBuilder {
 public:
     explicit RegistryBuilder(ObjectStore<ObjType>& store) : store_(store) {}
 
-    // Tier 1: Auto-bind a member function
+    // ---- Documentation (chainable after any bind call) ----
+
+    RegistryBuilder& doc(const std::string& description, std::initializer_list<ArgMeta> args = {},
+                         const std::string& return_type = "void") {
+        if (!lastBound_.empty()) {
+            FunctionMeta meta;
+            meta.description = description;
+            meta.args = args;
+            meta.return_type = return_type;
+            meta.needs_object = lastBoundNeedsObject_;
+            registry_.set_meta(lastBound_, std::move(meta));
+        }
+        return *this;
+    }
+
+    // ---- Tier 1: Auto-bind a member function ----
     template<auto MethodPtr> RegistryBuilder& bind_auto(const std::string& name) {
         registry_.add(name, [this]() {
             return std::make_unique<AutoObjectRunner<ObjType, MethodPtr>>(store_);
         });
+        lastBound_ = name;
+        lastBoundNeedsObject_ = true;
         return *this;
     }
 
-    // Tier 1b: Auto-bind a free/static function
+    // ---- Tier 1b: Auto-bind a free/static function ----
     template<auto FuncPtr> RegistryBuilder& bind_free(const std::string& name) {
         registry_.add(name, []() { return std::make_unique<AutoFreeRunner<FuncPtr>>(); });
+        lastBound_ = name;
+        lastBoundNeedsObject_ = false;
         return *this;
     }
 
-    // Tier 2: Lambda-bind with explicit argument types
-    // Note: shared_ptr is required here because std::function must be copyable
+    // ---- Tier 2: Lambda-bind with explicit argument types ----
     template<typename... Args, typename Func>
     RegistryBuilder& bind_lambda(const std::string& name, Func&& func) {
         auto fn = std::make_shared<std::decay_t<Func>>(std::forward<Func>(func));
@@ -103,28 +163,36 @@ public:
             return std::make_unique<LambdaObjectRunner<ObjType, std::decay_t<Func>, Args...>>(
                 store_, *fn);
         });
+        lastBound_ = name;
+        lastBoundNeedsObject_ = true;
         return *this;
     }
 
-    // Tier 2b: Lambda-bind free function (no object)
+    // ---- Tier 2b: Lambda-bind free function (no object) ----
     template<typename... Args, typename Func>
     RegistryBuilder& bind_free_lambda(const std::string& name, Func&& func) {
         auto fn = std::make_shared<std::decay_t<Func>>(std::forward<Func>(func));
         registry_.add(name, [fn]() {
             return std::make_unique<LambdaFreeRunner<std::decay_t<Func>, Args...>>(*fn);
         });
+        lastBound_ = name;
+        lastBoundNeedsObject_ = false;
         return *this;
     }
 
-    // Tier 3: Custom runner class
+    // ---- Tier 3: Custom runner class ----
     template<typename RunnerType> RegistryBuilder& bind_custom(const std::string& name) {
         registry_.add(name, [this]() { return std::make_unique<RunnerType>(store_); });
+        lastBound_ = name;
+        lastBoundNeedsObject_ = true;
         return *this;
     }
 
-    // Tier 3b: Custom free runner (no object store)
+    // ---- Tier 3b: Custom free runner (no object store) ----
     template<typename RunnerType> RegistryBuilder& bind_custom_free(const std::string& name) {
         registry_.add(name, []() { return std::make_unique<RunnerType>(); });
+        lastBound_ = name;
+        lastBoundNeedsObject_ = false;
         return *this;
     }
 
@@ -133,6 +201,8 @@ public:
 private:
     ObjectStore<ObjType>& store_;
     Registry registry_;
+    std::string lastBound_;
+    bool lastBoundNeedsObject_ = true;
 };
 
 } // namespace mexforge
