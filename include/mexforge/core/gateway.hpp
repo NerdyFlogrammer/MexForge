@@ -1,14 +1,13 @@
 #ifndef MEXFORGE_CORE_GATEWAY_HPP
 #define MEXFORGE_CORE_GATEWAY_HPP
 
-#include "registry.hpp"
+#include "MatlabDataArray.hpp"
 #include "logger.hpp"
-#include "object_store.hpp"
 #include "marshaller.hpp"
-
 #include "mex.hpp"
 #include "mexAdapter.hpp"
-#include "MatlabDataArray.hpp"
+#include "object_store.hpp"
+#include "registry.hpp"
 
 #include <memory>
 #include <string>
@@ -35,26 +34,19 @@ namespace mexforge {
 //   MEX_ENTRY(MyMex)
 // ============================================================================
 
-template<typename ObjType>
-class MexGateway : public matlab::mex::Function {
+template<typename ObjType> class MexGateway : public matlab::mex::Function {
 public:
-    MexGateway()
-        : logger_(getEngine())
-    {
+    MexGateway() : logger_(getEngine()) {
         RegistryBuilder<ObjType> builder(store_);
 
         // User-defined bindings
         setup(builder);
 
         registry_ = builder.build();
-        logger_.info("MexForge: Initialized with ",
-                     std::to_string(registry_.size()), " bindings");
+        logger_.info("MexForge: Initialized with ", std::to_string(registry_.size()), " bindings");
     }
 
-    void operator()(
-        matlab::mex::ArgumentList outputs,
-        matlab::mex::ArgumentList inputs) override
-    {
+    void operator()(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs) override {
         if (inputs.empty()) {
             reportError("MexForge: No function name provided");
             return;
@@ -92,19 +84,15 @@ protected:
     Registry& registry() { return registry_; }
 
 private:
-    bool handleControlCommand(
-        const std::string& cmd,
-        matlab::mex::ArgumentList outputs,
-        matlab::mex::ArgumentList inputs)
-    {
+    bool handleControlCommand(const std::string& cmd, matlab::mex::ArgumentList outputs,
+                              matlab::mex::ArgumentList inputs) {
         if (cmd == "__log_level") {
             if (inputs.size() > 1) {
                 auto level = FromMatlab<std::string>::convert(inputs[1]);
                 logger_.setLevel(level);
                 logger_.info("Log level set to: ", level);
             } else if (outputs.size() > 0) {
-                outputs[0] = factory_.createScalar(
-                    std::string(log_level_str(logger_.getLevel())));
+                outputs[0] = factory_.createScalar(std::string(log_level_str(logger_.getLevel())));
             }
             return true;
         }
@@ -145,9 +133,7 @@ private:
             auto names = registry_.list();
             std::sort(names.begin(), names.end());
             if (outputs.size() > 0) {
-                outputs[0] = factory_.createArray(
-                    {1, names.size()},
-                    names.begin(), names.end());
+                outputs[0] = factory_.createArray({1, names.size()}, names.begin(), names.end());
             } else {
                 for (const auto& name : names) {
                     logger_.info("  ", name);
@@ -164,8 +150,7 @@ private:
 
         if (cmd == "__store_size") {
             if (outputs.size() > 0) {
-                outputs[0] = factory_.createScalar(
-                    static_cast<uint32_t>(store_.size()));
+                outputs[0] = factory_.createScalar(static_cast<uint32_t>(store_.size()));
             }
             return true;
         }
@@ -176,9 +161,7 @@ private:
     void reportError(const std::string& msg) {
         auto engine = getEngine();
         engine->feval(u"error",
-            {factory_.createScalar("mexforge:error"),
-             factory_.createScalar(msg)},
-            {});
+                      {factory_.createScalar("mexforge:error"), factory_.createScalar(msg)}, {});
     }
 
     ObjectStore<ObjType> store_;
@@ -198,10 +181,10 @@ private:
 // This is intentionally minimal. The MexGateway base class does all the work.
 // ============================================================================
 
-#define MEX_ENTRY(GatewayClass) \
-    class MexFunction : public GatewayClass { \
-    public: \
-        using GatewayClass::GatewayClass; \
+#define MEX_ENTRY(GatewayClass)                                                                    \
+    class MexFunction : public GatewayClass {                                                      \
+    public:                                                                                        \
+        using GatewayClass::GatewayClass;                                                          \
     };
 
 #endif // MEXFORGE_CORE_GATEWAY_HPP

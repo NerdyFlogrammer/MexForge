@@ -17,12 +17,10 @@ namespace mexforge {
 //   - is_const
 // ============================================================================
 
-template<typename T>
-struct MethodTraits;
+template<typename T> struct MethodTraits;
 
 // Non-const member function
-template<typename R, typename C, typename... Args>
-struct MethodTraits<R(C::*)(Args...)> {
+template<typename R, typename C, typename... Args> struct MethodTraits<R (C::*)(Args...)> {
     using ReturnType = R;
     using ClassType = C;
     using ArgTypes = std::tuple<Args...>;
@@ -31,8 +29,7 @@ struct MethodTraits<R(C::*)(Args...)> {
 };
 
 // Const member function
-template<typename R, typename C, typename... Args>
-struct MethodTraits<R(C::*)(Args...) const> {
+template<typename R, typename C, typename... Args> struct MethodTraits<R (C::*)(Args...) const> {
     using ReturnType = R;
     using ClassType = C;
     using ArgTypes = std::tuple<Args...>;
@@ -41,8 +38,7 @@ struct MethodTraits<R(C::*)(Args...) const> {
 };
 
 // Free function / static member
-template<typename R, typename... Args>
-struct MethodTraits<R(*)(Args...)> {
+template<typename R, typename... Args> struct MethodTraits<R (*)(Args...)> {
     using ReturnType = R;
     using ClassType = void;
     using ArgTypes = std::tuple<Args...>;
@@ -52,11 +48,10 @@ struct MethodTraits<R(*)(Args...)> {
 
 // std::function and lambdas via operator()
 template<typename R, typename C, typename... Args>
-struct MethodTraits<R(C::*)(Args...) const> ;  // Already defined above
+struct MethodTraits<R (C::*)(Args...) const>; // Already defined above
 
 // Deduce from lambda/functor by looking at operator()
-template<typename T>
-struct MethodTraits : MethodTraits<decltype(&T::operator())> {};
+template<typename T> struct MethodTraits : MethodTraits<decltype(&T::operator())> {};
 
 // ============================================================================
 // FunctionTraits: For non-member function pointers (NTTP)
@@ -66,8 +61,7 @@ struct MethodTraits : MethodTraits<decltype(&T::operator())> {};
 //   using Ret = typename decltype(traits)::ReturnType;
 // ============================================================================
 
-template<auto Fn>
-struct FnTraits : MethodTraits<decltype(Fn)> {};
+template<auto Fn> struct FnTraits : MethodTraits<decltype(Fn)> {};
 
 // ============================================================================
 // Helpers: Extract Nth argument type

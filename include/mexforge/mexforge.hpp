@@ -28,13 +28,13 @@
 //
 // ============================================================================
 
-#include "core/types.hpp"
+#include "core/gateway.hpp"
+#include "core/logger.hpp"
 #include "core/marshaller.hpp"
 #include "core/method_traits.hpp"
 #include "core/object_store.hpp"
-#include "core/logger.hpp"
-#include "core/runner.hpp"
 #include "core/registry.hpp"
-#include "core/gateway.hpp"
+#include "core/runner.hpp"
+#include "core/types.hpp"
 
 #endif // MEXFORGE_MEXFORGE_HPP

@@ -21,8 +21,7 @@ namespace mexforge {
 //   store.remove(id);
 // ============================================================================
 
-template<typename T>
-class ObjectStore {
+template<typename T> class ObjectStore {
 public:
     int add(std::unique_ptr<T> obj) {
         int id = nextId_++;
@@ -30,8 +29,7 @@ public:
         return id;
     }
 
-    template<typename... Args>
-    int emplace(Args&&... args) {
+    template<typename... Args> int emplace(Args&&... args) {
         return add(std::make_unique<T>(std::forward<Args>(args)...));
     }
 
@@ -39,8 +37,8 @@ public:
     T& get_ref(int id) {
         auto it = objects_.find(id);
         if (it == objects_.end()) {
-            throw std::runtime_error(
-                "MexForge: Object with ID " + std::to_string(id) + " not found");
+            throw std::runtime_error("MexForge: Object with ID " + std::to_string(id) +
+                                     " not found");
         }
         return *it->second;
     }
@@ -48,19 +46,15 @@ public:
     const T& get_ref(int id) const {
         auto it = objects_.find(id);
         if (it == objects_.end()) {
-            throw std::runtime_error(
-                "MexForge: Object with ID " + std::to_string(id) + " not found");
+            throw std::runtime_error("MexForge: Object with ID " + std::to_string(id) +
+                                     " not found");
         }
         return *it->second;
     }
 
-    bool exists(int id) const {
-        return objects_.find(id) != objects_.end();
-    }
+    bool exists(int id) const { return objects_.find(id) != objects_.end(); }
 
-    void remove(int id) {
-        objects_.erase(id);
-    }
+    void remove(int id) { objects_.erase(id); }
 
     void clear() {
         objects_.clear();
@@ -70,8 +64,7 @@ public:
     size_t size() const { return objects_.size(); }
 
     // Iterate over all objects
-    template<typename Func>
-    void for_each(Func&& fn) {
+    template<typename Func> void for_each(Func&& fn) {
         for (auto& [id, obj] : objects_) {
             fn(id, *obj);
         }

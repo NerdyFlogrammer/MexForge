@@ -5,9 +5,9 @@
 
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
-#include <stdexcept>
 
 namespace mexforge {
 
@@ -21,13 +21,9 @@ class Registry {
 public:
     using Factory = std::function<std::unique_ptr<RunnerBase>()>;
 
-    void add(const std::string& name, Factory factory) {
-        factories_[name] = std::move(factory);
-    }
+    void add(const std::string& name, Factory factory) { factories_[name] = std::move(factory); }
 
-    bool exists(const std::string& name) const {
-        return factories_.find(name) != factories_.end();
-    }
+    bool exists(const std::string& name) const { return factories_.find(name) != factories_.end(); }
 
     // Returns non-owning reference. Registry owns the runner lifetime.
     RunnerBase& get(const std::string& name) {
@@ -78,15 +74,12 @@ private:
 //       .build();
 // ============================================================================
 
-template<typename ObjType>
-class RegistryBuilder {
+template<typename ObjType> class RegistryBuilder {
 public:
-    explicit RegistryBuilder(ObjectStore<ObjType>& store)
-        : store_(store) {}
+    explicit RegistryBuilder(ObjectStore<ObjType>& store) : store_(store) {}
 
     // Tier 1: Auto-bind a member function
-    template<auto MethodPtr>
-    RegistryBuilder& bind_auto(const std::string& name) {
+    template<auto MethodPtr> RegistryBuilder& bind_auto(const std::string& name) {
         registry_.add(name, [this]() {
             return std::make_unique<AutoObjectRunner<ObjType, MethodPtr>>(store_);
         });
@@ -94,11 +87,8 @@ public:
     }
 
     // Tier 1b: Auto-bind a free/static function
-    template<auto FuncPtr>
-    RegistryBuilder& bind_free(const std::string& name) {
-        registry_.add(name, []() {
-            return std::make_unique<AutoFreeRunner<FuncPtr>>();
-        });
+    template<auto FuncPtr> RegistryBuilder& bind_free(const std::string& name) {
+        registry_.add(name, []() { return std::make_unique<AutoFreeRunner<FuncPtr>>(); });
         return *this;
     }
 
@@ -125,20 +115,14 @@ public:
     }
 
     // Tier 3: Custom runner class
-    template<typename RunnerType>
-    RegistryBuilder& bind_custom(const std::string& name) {
-        registry_.add(name, [this]() {
-            return std::make_unique<RunnerType>(store_);
-        });
+    template<typename RunnerType> RegistryBuilder& bind_custom(const std::string& name) {
+        registry_.add(name, [this]() { return std::make_unique<RunnerType>(store_); });
         return *this;
     }
 
     // Tier 3b: Custom free runner (no object store)
-    template<typename RunnerType>
-    RegistryBuilder& bind_custom_free(const std::string& name) {
-        registry_.add(name, []() {
-            return std::make_unique<RunnerType>();
-        });
+    template<typename RunnerType> RegistryBuilder& bind_custom_free(const std::string& name) {
+        registry_.add(name, []() { return std::make_unique<RunnerType>(); });
         return *this;
     }
 
