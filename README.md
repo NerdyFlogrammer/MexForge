@@ -4,6 +4,7 @@
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
 [![Header Only](https://img.shields.io/badge/header--only-yes-green.svg)]()
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-orange.svg)](https://buymeacoffee.com/nerdyflogrammer)
 
 **A header-only C++17 library for creating MATLAB MEX interfaces with minimal boilerplate.**
@@ -300,6 +301,25 @@ MexForge/
 If MexForge saves you time, consider supporting the project:
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://buymeacoffee.com/nerdyflogrammer)
+
+## Citation
+
+If you use MexForge in academic work, please cite it:
+
+```bibtex
+@software{westmeir2026mexforge,
+  author  = {Westmeir, Florian},
+  title   = {{MexForge}: A Header-Only C++17 Library for MATLAB MEX Interfaces},
+  year    = {2026},
+  url     = {https://github.com/nerdyflogrammer/MexForge},
+  doi     = {10.5281/zenodo.XXXXXXX},
+  license = {Apache-2.0}
+}
+```
+
+A `CITATION.cff` is included — GitHub shows a **"Cite this repository"** button automatically.
+
+---
 
 ## License
 

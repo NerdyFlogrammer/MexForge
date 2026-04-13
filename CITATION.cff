@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use MexForge in your research, please cite it as below."
+type: software
+title: "MexForge"
+abstract: >
+  A header-only C++17 library for creating MATLAB MEX interfaces with minimal
+  boilerplate. Provides three binding tiers (auto, lambda, custom) with
+  compile-time signature extraction, automatic type marshalling, and a generic
+  object lifecycle store.
+authors:
+  - family-names: Westmeir
+    given-names: Florian
+    orcid: ""
+repository-code: "https://github.com/nerdyflogrammer/MexForge"
+url: "https://github.com/nerdyflogrammer/MexForge"
+license: Apache-2.0
+version: "0.2.0-alpha"
+date-released: "2026-04-13"
+keywords:
+  - MATLAB
+  - MEX
+  - C++17
+  - software-defined-radio
+  - bindings
+  - header-only
+  - metaprogramming
