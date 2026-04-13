@@ -156,6 +156,75 @@ private:
             return true;
         }
 
+        if (cmd == "__describe") {
+            if (inputs.size() > 1) {
+                auto funcName = FromMatlab<std::string>::convert(inputs[1]);
+                const auto& meta = registry_.get_meta(funcName);
+                if (!outputs.empty()) {
+                    outputs[0] = factory_.createScalar(meta.description);
+                }
+            }
+            return true;
+        }
+
+        if (cmd == "__arg_info") {
+            if (inputs.size() > 1) {
+                auto funcName = FromMatlab<std::string>::convert(inputs[1]);
+                const auto& meta = registry_.get_meta(funcName);
+                if (!outputs.empty()) {
+                    // Return struct array with fields: name, type, required
+                    auto result = factory_.createStructArray({1, meta.args.size()},
+                                                             {"name", "type", "required"});
+                    for (size_t i = 0; i < meta.args.size(); ++i) {
+                        result[i]["name"] = factory_.createScalar(meta.args[i].name);
+                        result[i]["type"] = factory_.createScalar(meta.args[i].type);
+                        result[i]["required"] = factory_.createScalar(meta.args[i].required);
+                    }
+                    outputs[0] = std::move(result);
+                }
+            }
+            return true;
+        }
+
+        if (cmd == "__return_type") {
+            if (inputs.size() > 1) {
+                auto funcName = FromMatlab<std::string>::convert(inputs[1]);
+                const auto& meta = registry_.get_meta(funcName);
+                if (!outputs.empty()) {
+                    outputs[0] = factory_.createScalar(meta.return_type);
+                }
+            }
+            return true;
+        }
+
+        if (cmd == "__needs_object") {
+            if (inputs.size() > 1) {
+                auto funcName = FromMatlab<std::string>::convert(inputs[1]);
+                const auto& meta = registry_.get_meta(funcName);
+                if (!outputs.empty()) {
+                    outputs[0] = factory_.createScalar(meta.needs_object);
+                }
+            }
+            return true;
+        }
+
+        if (cmd == "__list_methods") {
+            // Like __list_functions but only object methods (no internals, no free functions)
+            auto names = registry_.list_with_meta();
+            std::vector<std::string> methods;
+            for (const auto& name : names) {
+                if (registry_.has_meta(name) && registry_.get_meta(name).needs_object) {
+                    methods.push_back(name);
+                }
+            }
+            std::sort(methods.begin(), methods.end());
+            if (!outputs.empty()) {
+                outputs[0] =
+                    factory_.createArray({1, methods.size()}, methods.begin(), methods.end());
+            }
+            return true;
+        }
+
         return false;
     }
 
