@@ -16,9 +16,13 @@ Checks: >
   -readability-identifier-length,
   -readability-function-cognitive-complexity,
   -readability-identifier-naming,
+  -readability-braces-around-statements,
   misc-*,
   -misc-non-private-member-variables-in-classes,
   -misc-include-cleaner,
+  -cppcoreguidelines-macro-usage,
+  -bugprone-macro-parentheses,
+  -performance-enum-size,
 
 WarningsAsErrors: ''
 

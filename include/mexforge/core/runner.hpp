@@ -174,7 +174,7 @@ public:
             detail::call_method<ObjType, MethodPtr>(obj, args);
         } else {
             auto result = detail::call_method<ObjType, MethodPtr>(obj, args);
-            if (outputs.size() > 0) {
+            if (!outputs.empty()) {
                 outputs[0] = to_matlab(factory_, result);
             }
         }
@@ -213,7 +213,7 @@ public:
             detail::call_free<FuncPtr>(args);
         } else {
             auto result = detail::call_free<FuncPtr>(args);
-            if (outputs.size() > 0) {
+            if (!outputs.empty()) {
                 outputs[0] = to_matlab(factory_, result);
             }
         }
@@ -264,7 +264,7 @@ public:
             detail::call_lambda(func_, obj, args);
         } else {
             auto result = detail::call_lambda(func_, obj, args);
-            if (outputs.size() > 0) {
+            if (!outputs.empty()) {
                 outputs[0] = to_matlab(factory_, result);
             }
         }
@@ -305,7 +305,7 @@ public:
             std::apply(func_, args);
         } else {
             auto result = std::apply(func_, args);
-            if (outputs.size() > 0) {
+            if (!outputs.empty()) {
                 outputs[0] = to_matlab(factory_, result);
             }
         }

@@ -23,7 +23,9 @@ public:
 
     void add(const std::string& name, Factory factory) { factories_[name] = std::move(factory); }
 
-    bool exists(const std::string& name) const { return factories_.find(name) != factories_.end(); }
+    [[nodiscard]] bool exists(const std::string& name) const {
+        return factories_.find(name) != factories_.end();
+    }
 
     // Returns non-owning reference. Registry owns the runner lifetime.
     RunnerBase& get(const std::string& name) {
@@ -53,7 +55,7 @@ public:
         return names;
     }
 
-    size_t size() const { return factories_.size(); }
+    [[nodiscard]] size_t size() const { return factories_.size(); }
 
 private:
     std::unordered_map<std::string, Factory> factories_;

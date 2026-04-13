@@ -9,6 +9,7 @@
 #include "object_store.hpp"
 #include "registry.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <string>
 
@@ -91,7 +92,7 @@ private:
                 auto level = FromMatlab<std::string>::convert(inputs[1]);
                 logger_.setLevel(level);
                 logger_.info("Log level set to: ", level);
-            } else if (outputs.size() > 0) {
+            } else if (!outputs.empty()) {
                 outputs[0] = factory_.createScalar(std::string(log_level_str(logger_.getLevel())));
             }
             return true;
@@ -132,7 +133,7 @@ private:
         if (cmd == "__list_functions") {
             auto names = registry_.list();
             std::sort(names.begin(), names.end());
-            if (outputs.size() > 0) {
+            if (!outputs.empty()) {
                 outputs[0] = factory_.createArray({1, names.size()}, names.begin(), names.end());
             } else {
                 for (const auto& name : names) {
@@ -149,7 +150,7 @@ private:
         }
 
         if (cmd == "__store_size") {
-            if (outputs.size() > 0) {
+            if (!outputs.empty()) {
                 outputs[0] = factory_.createScalar(static_cast<uint32_t>(store_.size()));
             }
             return true;

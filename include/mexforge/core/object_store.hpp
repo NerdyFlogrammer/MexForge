@@ -5,6 +5,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace mexforge {
 
@@ -52,7 +53,7 @@ public:
         return *it->second;
     }
 
-    bool exists(int id) const { return objects_.find(id) != objects_.end(); }
+    [[nodiscard]] bool exists(int id) const { return objects_.find(id) != objects_.end(); }
 
     void remove(int id) { objects_.erase(id); }
 
@@ -61,12 +62,12 @@ public:
         nextId_ = 0;
     }
 
-    size_t size() const { return objects_.size(); }
+    [[nodiscard]] size_t size() const { return objects_.size(); }
 
     // Iterate over all objects
     template<typename Func> void for_each(Func&& fn) {
         for (auto& [id, obj] : objects_) {
-            fn(id, *obj);
+            std::forward<Func>(fn)(id, *obj);
         }
     }
 
