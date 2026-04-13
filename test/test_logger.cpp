@@ -102,7 +102,7 @@ void test_file_logging() {
 
     std::string line;
     std::getline(in, line);
-    assert(line.find("[INFO]") != std::string::npos);
+    assert(line.find("[info]") != std::string::npos);
     assert(line.find("file test message") != std::string::npos);
 
     std::filesystem::remove(testFile);

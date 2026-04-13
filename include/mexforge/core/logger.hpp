@@ -29,22 +29,24 @@ enum class LogLevel : int {
     Off = 6
 };
 
+// Returns lowercase level name — matches the strings accepted by setLevel()
+// so that bindings("__log_level") round-trips correctly.
 inline const char* log_level_str(LogLevel level) {
     switch (level) {
     case LogLevel::Trace:
-        return "TRACE";
+        return "trace";
     case LogLevel::Debug:
-        return "DEBUG";
+        return "debug";
     case LogLevel::Info:
-        return "INFO";
+        return "info";
     case LogLevel::Warn:
-        return "WARN";
+        return "warn";
     case LogLevel::Error:
-        return "ERROR";
+        return "error";
     case LogLevel::Fatal:
-        return "FATAL";
+        return "fatal";
     default:
-        return "OFF";
+        return "off";
     }
 }
 

@@ -37,17 +37,21 @@ namespace mexforge {
 
 template<typename ObjType> class MexGateway : public matlab::mex::Function {
 public:
-    MexGateway() : logger_(getEngine()) {
-        RegistryBuilder<ObjType> builder(store_);
-
-        // User-defined bindings
-        setup(builder);
-
-        registry_ = builder.build();
-        logger_.info("MexForge: Initialized with ", std::to_string(registry_.size()), " bindings");
-    }
+    // Lazy initialization: setup() is called on first operator() invocation,
+    // not in the constructor. This avoids undefined behavior from calling a
+    // pure virtual function during base class construction.
+    MexGateway() : logger_(getEngine()), initialized_(false) {}
 
     void operator()(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs) override {
+        if (!initialized_) {
+            RegistryBuilder<ObjType> builder(store_);
+            setup(builder);
+            registry_ = builder.build();
+            initialized_ = true;
+            logger_.info("MexForge: Initialized with ", std::to_string(registry_.size()),
+                         " bindings");
+        }
+
         if (inputs.empty()) {
             reportError("MexForge: No function name provided");
             return;
@@ -238,6 +242,7 @@ private:
     Registry registry_;
     Logger logger_;
     matlab::data::ArrayFactory factory_;
+    bool initialized_;
 };
 
 } // namespace mexforge

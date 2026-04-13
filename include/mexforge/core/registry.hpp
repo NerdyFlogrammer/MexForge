@@ -138,9 +138,13 @@ public:
     }
 
     // ---- Tier 1: Auto-bind a member function ----
+    // Capture store_ as a raw pointer: the ObjectStore lives in MexGateway and
+    // outlives the RegistryBuilder, so the pointer is always valid when the
+    // factory lambda is called later.
     template<auto MethodPtr> RegistryBuilder& bind_auto(const std::string& name) {
-        registry_.add(name, [this]() {
-            return std::make_unique<AutoObjectRunner<ObjType, MethodPtr>>(store_);
+        auto* s = &store_;
+        registry_.add(name, [s]() {
+            return std::make_unique<AutoObjectRunner<ObjType, MethodPtr>>(*s);
         });
         lastBound_ = name;
         lastBoundNeedsObject_ = true;
@@ -158,10 +162,11 @@ public:
     // ---- Tier 2: Lambda-bind with explicit argument types ----
     template<typename... Args, typename Func>
     RegistryBuilder& bind_lambda(const std::string& name, Func&& func) {
+        auto* s = &store_;
         auto fn = std::make_shared<std::decay_t<Func>>(std::forward<Func>(func));
-        registry_.add(name, [this, fn]() {
+        registry_.add(name, [s, fn]() {
             return std::make_unique<LambdaObjectRunner<ObjType, std::decay_t<Func>, Args...>>(
-                store_, *fn);
+                *s, *fn);
         });
         lastBound_ = name;
         lastBoundNeedsObject_ = true;
@@ -182,7 +187,8 @@ public:
 
     // ---- Tier 3: Custom runner class ----
     template<typename RunnerType> RegistryBuilder& bind_custom(const std::string& name) {
-        registry_.add(name, [this]() { return std::make_unique<RunnerType>(store_); });
+        auto* s = &store_;
+        registry_.add(name, [s]() { return std::make_unique<RunnerType>(*s); });
         lastBound_ = name;
         lastBoundNeedsObject_ = true;
         return *this;

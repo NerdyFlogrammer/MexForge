@@ -35,6 +35,7 @@ jobs:
           ${{ matrix.compiler }} -std=c++17 -Wall -Wextra -Wpedantic -I include -I test/mock_matlab -o test_registry test/test_registry.cpp
           ${{ matrix.compiler }} -std=c++17 -Wall -Wextra -Wpedantic -I include -I test/mock_matlab -o test_marshaller test/test_marshaller.cpp
           ${{ matrix.compiler }} -std=c++17 -Wall -Wextra -Wpedantic -I include -I test/mock_matlab -o test_runner test/test_runner.cpp
+          ${{ matrix.compiler }} -std=c++17 -Wall -Wextra -Wpedantic -I include -I test/mock_matlab -o test_gateway test/test_gateway.cpp
           ./test_types
           ./test_method_traits
           ./test_object_store
@@ -42,6 +43,7 @@ jobs:
           ./test_registry
           ./test_marshaller
           ./test_runner
+          ./test_gateway
 
       - name: Build and run tests (Windows)
         if: runner.os == 'Windows'
@@ -55,6 +57,7 @@ jobs:
           cl /std:c++17 /W4 /EHsc /I include /I test\mock_matlab /Fe:test_registry.exe test\test_registry.cpp
           cl /std:c++17 /W4 /EHsc /I include /I test\mock_matlab /Fe:test_marshaller.exe test\test_marshaller.cpp
           cl /std:c++17 /W4 /EHsc /I include /I test\mock_matlab /Fe:test_runner.exe test\test_runner.cpp
+          cl /std:c++17 /W4 /EHsc /I include /I test\mock_matlab /Fe:test_gateway.exe test\test_gateway.cpp
           test_types.exe
           test_method_traits.exe
           test_object_store.exe
@@ -62,6 +65,7 @@ jobs:
           test_registry.exe
           test_marshaller.exe
           test_runner.exe
+          test_gateway.exe
 
       - name: Syntax check example bindings
         if: runner.os != 'Windows'
