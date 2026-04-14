@@ -145,39 +145,39 @@ function writeClass(outputDir, mexName, methods, meta)
         field = matlab.lang.makeValidName(name);
         m     = meta.(field);
 
-        % Split args into required and optional.
-        % Use char() so reqArgs is always a cell of char vectors (strjoin requirement).
-        % Rename MATLAB reserved keywords (e.g. "function" → "function_").
-        reqArgs = {};
-        hasOpt  = false;
+        % Collect required args (rename MATLAB keywords, keep char for strjoin).
+        reqArgs     = {};
+        reqArgTypes = {};
+        hasOpt      = false;
         for j = 1:numel(m.args)
             if m.args(j).required
                 argName = char(m.args(j).name);
                 if iskeyword(argName)
                     argName = [argName '_']; %#ok<AGROW>
                 end
-                reqArgs{end+1} = argName; %#ok<AGROW>
+                reqArgs{end+1}     = argName;           %#ok<AGROW>
+                reqArgTypes{end+1} = char(m.args(j).type); %#ok<AGROW>
             else
                 hasOpt = true;
                 break;
             end
         end
 
-        % Build function signature line
+        % Function signature
         if isempty(reqArgs) && ~hasOpt
             sig      = sprintf('        function varargout = %s(obj)', name);
             callArgs = sprintf('"%s"', name);
         elseif hasOpt
             if isempty(reqArgs)
-                sig = sprintf('        function varargout = %s(obj, varargin)', name);
+                sig      = sprintf('        function varargout = %s(obj, varargin)', name);
                 callArgs = sprintf('"%s", varargin{:}', name);
             else
-                sig = sprintf('        function varargout = %s(obj, %s, varargin)', ...
+                sig      = sprintf('        function varargout = %s(obj, %s, varargin)', ...
                     name, strjoin(reqArgs, ', '));
                 callArgs = sprintf('"%s", %s, varargin{:}', name, strjoin(reqArgs, ', '));
             end
         else
-            sig = sprintf('        function varargout = %s(obj, %s)', ...
+            sig      = sprintf('        function varargout = %s(obj, %s)', ...
                 name, strjoin(reqArgs, ', '));
             callArgs = sprintf('"%s", %s', name, strjoin(reqArgs, ', '));
         end
@@ -192,6 +192,18 @@ function writeClass(outputDir, mexName, methods, meta)
         if ~isempty(commentStr)
             emit(sprintf('            %% %s', commentStr));
         end
+
+        % arguments block — enables editor argument hints and type tooltips
+        if ~isempty(reqArgs) && ~hasOpt
+            emit('            arguments');
+            emit('                obj');
+            for j = 1:numel(reqArgs)
+                mtype = matlabType(reqArgTypes{j});
+                emit(sprintf('                %s %s', reqArgs{j}, mtype));
+            end
+            emit('            end');
+        end
+
         emit(sprintf('            [varargout{1:nargout}] = callMethod(obj, %s);', callArgs));
         emit('        end');
         emit('');
@@ -208,4 +220,22 @@ function writeClass(outputDir, mexName, methods, meta)
     fclose(fid);
     fprintf('  %s.m  (%d methods)\n', className, numel(methods));
     fprintf('Usage: calc = %s(constructor_args...);\n', className);
+end
+
+% --------------------------------------------------------------------------
+
+function t = matlabType(cppType)
+    % Map C++ type string to MATLAB arguments-block type annotation.
+    switch cppType
+        case 'double',              t = '(1,1) double';
+        case 'single',              t = '(1,1) single';
+        case 'int32',               t = '(1,1) int32';
+        case 'uint32',              t = '(1,1) uint32';
+        case 'int64',               t = '(1,1) int64';
+        case 'uint64',              t = '(1,1) uint64';
+        case 'logical',             t = '(1,1) logical';
+        case {'string','char'},     t = '(1,1) {string,char}';
+        case {'double[]','double[,]'}, t = '(:,:) double';
+        otherwise,                  t = '';
+    end
 end
