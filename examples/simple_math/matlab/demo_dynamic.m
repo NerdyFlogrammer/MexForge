@@ -13,7 +13,6 @@ repoRoot    = fullfile(fileparts(mfilename('fullpath')), '..', '..', '..');
 bindingsDir = fullfile(fileparts(mfilename('fullpath')), '..');
 addpath(fullfile(repoRoot, 'matlab'));   % +mexforge package
 addpath(bindingsDir);                    % bindings MEX + generated class
-savepath;  % make permanent so the editor can resolve bindings_obj statically
 
 %% Generate wrapper class for full editor tab-completion
 %  (run once after each recompile — creates bindings_obj.m in bindingsDir)
