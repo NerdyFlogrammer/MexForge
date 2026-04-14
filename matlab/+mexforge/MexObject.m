@@ -257,12 +257,16 @@ classdef MexObject < handle & matlab.mixin.CustomDisplay
 
     % ---- Private helpers ----
 
-    methods (Access = private)
+    % ---- Protected dispatch (used by generate_signatures-generated subclasses) ----
+
+    methods (Access = protected)
         function [varargout] = callMethod(obj, name, varargin)
             obj.checkArgs(name, varargin{:});
             [varargout{1:nargout}] = obj.mexFunc_(name, obj.id_, varargin{:});
         end
+    end
 
+    methods (Access = private)
         function desc = getDescription(obj, methodName)
             try
                 desc = obj.mexFunc_("__describe", methodName);
