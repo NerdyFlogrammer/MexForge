@@ -11,17 +11,16 @@ authors:
   - family-names: Westmeier
     given-names: Florian
     orcid: ""
-doi: "10.5281/zenodo.19560403"
+doi: "10.5281/zenodo.19566913"
 repository-code: "https://github.com/nerdyflogrammer/MexForge"
 url: "https://github.com/nerdyflogrammer/MexForge"
 license: Apache-2.0
-version: "0.2.0-alpha"
-date-released: "2026-04-13"
+version: "0.5.0"
+date-released: "2026-04-14"
 keywords:
   - MATLAB
   - MEX
   - C++17
-  - software-defined-radio
   - bindings
   - header-only
   - metaprogramming
