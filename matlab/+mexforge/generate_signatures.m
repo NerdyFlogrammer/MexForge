@@ -147,11 +147,16 @@ function writeClass(outputDir, mexName, methods, meta)
 
         % Split args into required and optional.
         % Use char() so reqArgs is always a cell of char vectors (strjoin requirement).
+        % Rename MATLAB reserved keywords (e.g. "function" → "function_").
         reqArgs = {};
         hasOpt  = false;
         for j = 1:numel(m.args)
             if m.args(j).required
-                reqArgs{end+1} = char(m.args(j).name); %#ok<AGROW>
+                argName = char(m.args(j).name);
+                if iskeyword(argName)
+                    argName = [argName '_']; %#ok<AGROW>
+                end
+                reqArgs{end+1} = argName; %#ok<AGROW>
             else
                 hasOpt = true;
                 break;
