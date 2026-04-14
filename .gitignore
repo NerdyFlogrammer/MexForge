@@ -18,3 +18,4 @@ release/
 resources/
 toolbox.ignore
 .gitattributes
+toolbox.prj
