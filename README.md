@@ -130,8 +130,8 @@ clear calc;                   % automatic cleanup
 Extracts the method signature at compile time. Arguments are marshalled automatically. No code to write.
 
 ```cpp
-b.bind_auto<&MyClass::getRate>("get_rate");
-b.bind_auto<&MyClass::setRate>("set_rate");
+b.bind_auto<&Calculator::add>("add");
+b.bind_auto<&Calculator::power>("power");
 ```
 
 ### Tier 2: `bind_lambda` — Custom logic with auto-marshalling
@@ -140,7 +140,7 @@ For methods that need argument transformation, optional parameter handling, or c
 
 ```cpp
 b.bind_lambda<double, double, std::string>("compute",
-    [](MyClass& obj, double a, double b, std::string op) -> double {
+    [](Calculator& obj, double a, double b, std::string op) -> double {
         return obj.compute(a, b, op);
     });
 ```
@@ -150,8 +150,8 @@ b.bind_lambda<double, double, std::string>("compute",
 Subclass `CustomRunner<T>` for complex scenarios like buffer handling, dynamic type dispatch, or multi-output functions.
 
 ```cpp
-class StreamHandler : public mexforge::CustomRunner<MyDevice> {
-    void execute(MyDevice& dev,
+class LinspaceRunner : public mexforge::CustomRunner<Calculator> {
+    void execute(Calculator& calc,
                  matlab::mex::ArgumentList outputs,
                  matlab::mex::ArgumentList inputs,
                  matlab::data::ArrayFactory& factory,
@@ -161,7 +161,7 @@ class StreamHandler : public mexforge::CustomRunner<MyDevice> {
     }
 };
 
-b.bind_custom<StreamHandler>("stream");
+b.bind_custom<LinspaceRunner>("linspace");
 ```
 
 ---
@@ -172,17 +172,18 @@ b.bind_custom<StreamHandler>("stream");
 
 ```matlab
 % Works with ANY MexForge library — no per-library .m file needed
-obj = mexforge.MexObject(@my_mex_lib, constructor_args...);
+calc = mexforge.MexObject(@bindings, "myCalc");
 
 % Methods are dispatched dynamically to C++
-obj.someMethod(arg1, arg2);
+calc.add(2, 3)                % 5
+calc.power(2, 10)             % 1024
 
 % Introspection
-obj.availableMethods()        % List all methods with descriptions
-obj.showHelp("someMethod")    % Show args, types, return type
+calc.availableMethods()       % List all methods with descriptions
+calc.showHelp("add")          % Show args, types, return type
 
 % Tab-completion support
-mexforge.generate_signatures(@my_mex_lib);  % Generate autocomplete JSON
+mexforge.generate_signatures(@bindings);  % Generate autocomplete JSON
 ```
 
 ### Documentation via `.doc()`
@@ -190,17 +191,20 @@ mexforge.generate_signatures(@my_mex_lib);  % Generate autocomplete JSON
 Add metadata to your C++ bindings for help texts and type checking:
 
 ```cpp
-b.bind_auto<&MyClass::setRate>("set_rate")
-    .doc("Set the sample rate in Hz",
-         {{"rate", "double", true}, {"channel", "int32", false}})
+b.bind_auto<&Calculator::add>("add")
+    .doc("Add two numbers",
+         {{"a", "double", true}, {"b", "double", true}},
+         "double")
 
- .bind_auto<&MyClass::getRate>("get_rate")
-    .doc("Get the current sample rate", {}, "double");
+ .bind_auto<&Calculator::power>("power")
+    .doc("Raise base to an exponent",
+         {{"base", "double", true}, {"exp", "double", true}},
+         "double");
 ```
 
 This enables:
-- `obj.showHelp("set_rate")` → shows description, args, types
-- `obj.checkArgs("set_rate", ...)` → validates before MEX call
+- `calc.showHelp("add")` → shows description, args, types
+- `calc.checkArgs("add", ...)` → validates before MEX call
 - `mexforge.generate_signatures(...)` → tab-completion in MATLAB editor
 
 ### Full Live Editor Argument Hints
