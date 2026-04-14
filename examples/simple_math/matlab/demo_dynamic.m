@@ -41,9 +41,8 @@ fprintf('compute(10, 3, "div") = %g\n', result);
 calc.availableMethods();
 
 %% Help for a specific method
-calc.showHelp("compute");
-calc.showHelp("linspace");
-
+calc.help("compute");
+calc.help("linspace");
 %% Batch operations
 data = calc.linspace(0, pi, 100);
 sines = calc.apply(data, "sin");

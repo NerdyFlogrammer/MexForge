@@ -203,6 +203,48 @@ This enables:
 - `obj.checkArgs("set_rate", ...)` → validates before MEX call
 - `mexforge.generate_signatures(...)` → tab-completion in MATLAB editor
 
+### Full Live Editor Argument Hints
+
+`MexObject` provides command-window tab-completion (method names via `obj.<Tab>`) out of the box. For **argument hints inside the Live Editor** (the `f(x, |` popup that shows parameter names and types), MATLAB's static analyzer needs a real `.m` file on the MATLAB path — it does not execute `addpath` calls inside scripts.
+
+The workflow is:
+
+**Step 1 — Generate once (after each recompile):**
+
+```matlab
+addpath('/path/to/MexForge/matlab');   % +mexforge package
+addpath('/path/to/your/bindings/');    % where bindings.mex* lives
+
+mexforge.generate_signatures(@bindings, '/path/to/your/bindings/');
+% Creates:
+%   bindings_obj.m            — standalone handle class with all method stubs
+%   functionSignatures.json   — argument hints for the MATLAB editor
+```
+
+**Step 2 — Commit the generated files** alongside your bindings:
+
+```
+your_project/
+├── bindings.cpp
+├── bindings.mexmaca64      ← compiled MEX
+├── bindings_obj.m          ← commit this  ✓
+├── functionSignatures.json ← commit this  ✓
+└── matlab/demo.m
+```
+
+**Step 3 — Use the generated class** instead of `MexObject`:
+
+```matlab
+calc = bindings_obj("myCalc");   % editor resolves the type statically
+calc.add(2, 3)                   % Live Editor shows (a, b) hint
+calc.compute(10, 3, "div")       % shows (a, b, op) hint
+```
+
+Why a standalone class (not a subclass of `MexObject`)?  
+MATLAB's static analyzer stops resolving method signatures when it sees a custom `subsref` in a base class. `bindings_obj` is a plain `handle` subclass — no dynamic dispatch, just explicit method stubs — so the Live Editor can analyze it fully.
+
+> **Note:** `bindings_obj.m` and `functionSignatures.json` are project-specific generated files. Commit them to your project repository. Do **not** add them to `.gitignore`.
+
 ---
 
 ## Logging
