@@ -4,7 +4,7 @@
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
 [![Header Only](https://img.shields.io/badge/header--only-yes-green.svg)]()
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.19567106-blue.svg)](https://doi.org/10.5281/zenodo.19567106)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.19560402-blue.svg)](https://doi.org/10.5281/zenodo.19560402)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-orange.svg)](https://buymeacoffee.com/nerdyflogrammer)
 
 **A header-only C++17 library for wrapping C++ classes as MATLAB MEX interfaces — with minimal boilerplate.**
@@ -383,7 +383,7 @@ If you use MexForge in academic work, please cite it:
   title   = {{MexForge}: A Header-Only C++17 Library for MATLAB MEX Interfaces},
   year    = {2026},
   url     = {https://github.com/nerdyflogrammer/MexForge},
-  doi     = {10.5281/zenodo.19567106},
+  doi     = {10.5281/zenodo.19560402},
   license = {Apache-2.0}
 }
 ```
