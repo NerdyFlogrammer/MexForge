@@ -1,0 +1,119 @@
+<deployment-project plugin="plugin.toolbox" plugin-version="1.0">
+  <configuration build-checksum="0" file="toolbox.prj" location="." name="MexForge" target="target.toolbox" target-name="Package Toolbox">
+    <param.appname>MexForge</param.appname>
+    <param.authnamewatermark>Florian Westmeier</param.authnamewatermark>
+    <param.email></param.email>
+    <param.company></param.company>
+    <param.summary>Header-only C++17 library for wrapping C++ classes as MATLAB MEX interfaces — with minimal boilerplate.</param.summary>
+    <param.description>MexForge eliminates the tedious parts of MEX development. Instead of writing hundreds of lines of argument-parsing and type-conversion code, you declare bindings in a few lines and the library handles the rest: argument marshalling, type validation, object lifecycle, and error reporting — largely at compile time.
+
+Features:
+- Three binding tiers: bind_auto (zero boilerplate), bind_lambda (custom logic), bind_custom (full control)
+- Compile-time signature extraction via C++17 template metaprogramming
+- Automatic MATLAB &lt;-&gt; C++ type marshalling (scalar, vector, string, optional, struct)
+- Generic object store with unique_ptr ownership
+- Dynamic MexObject: call any MexForge library from MATLAB without a wrapper class
+- Live Editor argument hints via generate_signatures
+- Multi-level logging with compile-time elimination
+- Header-only: just #include and go</param.description>
+    <param.screenshot></param.screenshot>
+    <param.version>0.5.0</param.version>
+    <param.output>${PROJECT_ROOT}/release</param.output>
+    <param.products.name />
+    <param.products.id />
+    <param.products.version />
+    <param.platforms />
+    <param.guid>a1b2c3d4-e5f6-7890-abcd-ef1234567890</param.guid>
+    <param.exclude.filters>% List files contained in your toolbox folder that you would like to exclude
+% from packaging.  Separate the names with a semicolon here:
+.git
+.github
+build
+test
+*.mexa64
+*.mexmaca64
+*.mexmaci64
+*.mexw64
+.gitignore
+.cache
+compile_commands.json</param.exclude.filters>
+    <param.exclude.pcodedmfiles>true</param.exclude.pcodedmfiles>
+    <param.examples>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;examples&gt;
+   &lt;exampleCategory name="simple_math"&gt;
+      &lt;example name="demo_dynamic" type="matlab"&gt;
+         &lt;file type="source"&gt;/examples/simple_math/matlab/demo_dynamic.m&lt;/file&gt;
+         &lt;file type="main"&gt;/examples/simple_math/matlab/demo_dynamic.m&lt;/file&gt;
+      &lt;/example&gt;
+   &lt;/exampleCategory&gt;
+&lt;/examples&gt;</param.examples>
+    <param.demosxml />
+    <param.apps />
+    <param.registered.apps />
+    <param.docs />
+    <param.getting.started.guide />
+    <param.matlabpath.excludes />
+    <param.javaclasspath.excludes />
+    <param.exported.on.package>false</param.exported.on.package>
+    <param.required.addons />
+    <param.matlab.project.id />
+    <param.matlab.project.name />
+    <param.release.start>R2018b</param.release.start>
+    <param.release.end>latest</param.release.end>
+    <param.release.current.target />
+    <param.fullpath.permission>Execute</param.fullpath.permission>
+    <param.wiki.page />
+    <param.enable.source.control>true</param.enable.source.control>
+    <param.use.localmatlab>false</param.use.localmatlab>
+    <param.toolbox.platform>
+      <param.toolbox.platform.windows>true</param.toolbox.platform.windows>
+      <param.toolbox.platform.unix>true</param.toolbox.platform.unix>
+      <param.toolbox.platform.mac>true</param.toolbox.platform.mac>
+    </param.toolbox.platform>
+    <param.toolbox.matlab.incompatible>false</param.toolbox.matlab.incompatible>
+    <param.toolbox.matlab.latest>false</param.toolbox.matlab.latest>
+    <fileset.rootdir>
+      <file>${PROJECT_ROOT}</file>
+    </fileset.rootdir>
+    <fileset.rootfiles>
+      <file>${PROJECT_ROOT}/include</file>
+      <file>${PROJECT_ROOT}/matlab</file>
+      <file>${PROJECT_ROOT}/examples</file>
+      <file>${PROJECT_ROOT}/LICENSE</file>
+      <file>${PROJECT_ROOT}/README.md</file>
+    </fileset.rootfiles>
+    <fileset.depfun.included />
+    <fileset.depfun.excluded />
+    <fileset.package />
+    <build-deliverables>
+      <file location="${PROJECT_ROOT}/release" name="MexForge.mltbx" optional="false">${PROJECT_ROOT}/release/MexForge.mltbx</file>
+    </build-deliverables>
+    <workflow>
+      <target name="Package Toolbox" />
+    </workflow>
+    <matlab>
+      <root />
+      <toolboxes />
+    </matlab>
+    <platform>
+      <unix>false</unix>
+    </platform>
+    <requirements>
+      <matlab>
+        <version.major>9</version.major>
+        <version.minor>5</version.minor>
+        <version.maintenance>0</version.maintenance>
+        <version.build>0</version.build>
+      </matlab>
+    </requirements>
+    <package>
+      <wants.unpacked.source>false</wants.unpacked.source>
+      <archives>
+        <archive>${PROJECT_ROOT}/release/MexForge.mltbx</archive>
+      </archives>
+    </package>
+    <deployment>
+      <targets />
+    </deployment>
+  </configuration>
+</deployment-project>

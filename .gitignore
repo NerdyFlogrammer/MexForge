@@ -14,3 +14,4 @@ test/test_method_traits
 test/test_object_store
 test/test_logger
 test/test_registry
+release/
