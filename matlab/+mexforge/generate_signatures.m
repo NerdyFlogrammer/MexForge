@@ -225,17 +225,16 @@ end
 % --------------------------------------------------------------------------
 
 function t = matlabType(cppType)
-    % Map C++ type string to MATLAB arguments-block type annotation.
+    % Map C++ type to MATLAB arguments-block annotation.
+    % Integer C++ types map to double — MATLAB users pass double literals
+    % (e.g. 100) and C++ coerces them. Declaring int32 here would reject
+    % those literals before the MEX function even runs.
     switch cppType
-        case 'double',              t = '(1,1) double';
-        case 'single',              t = '(1,1) single';
-        case 'int32',               t = '(1,1) int32';
-        case 'uint32',              t = '(1,1) uint32';
-        case 'int64',               t = '(1,1) int64';
-        case 'uint64',              t = '(1,1) uint64';
-        case 'logical',             t = '(1,1) logical';
-        case {'string','char'},     t = '(1,1) {string,char}';
-        case {'double[]','double[,]'}, t = '(:,:) double';
-        otherwise,                  t = '';
+        case {'double','single'},                       t = '(1,1) double';
+        case {'int32','uint32','int64','uint64'},        t = '(1,1) double';
+        case 'logical',                                 t = '(1,1) logical';
+        case {'string','char'},                         t = '{mustBeTextScalar}';
+        case {'double[]','double[,]','double[]'},       t = 'double';
+        otherwise,                                      t = '';
     end
 end
