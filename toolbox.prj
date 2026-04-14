@@ -15,7 +15,9 @@ Features:
 - Dynamic MexObject: call any MexForge library from MATLAB without a wrapper class
 - Live Editor argument hints via generate_signatures
 - Multi-level logging with compile-time elimination
-- Header-only: just #include and go</param.description>
+- Header-only: just #include and go
+
+Requires a C++17-compatible compiler (MSVC 2017+, GCC 8+, Clang/Xcode 15+) and MATLAB R2018b or later to build MEX files. Provided "as is" under the Apache 2.0 license — no warranty of any kind. See LICENSE for full terms.</param.description>
     <param.screenshot></param.screenshot>
     <param.version>0.5.0</param.version>
     <param.output>${PROJECT_ROOT}/release</param.output>
