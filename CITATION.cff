@@ -11,11 +11,11 @@ authors:
   - family-names: Westmeier
     given-names: Florian
     orcid: ""
-doi: "10.5281/zenodo.19566913"
+doi: "10.5281/zenodo.19567106"
 repository-code: "https://github.com/nerdyflogrammer/MexForge"
 url: "https://github.com/nerdyflogrammer/MexForge"
 license: Apache-2.0
-version: "0.5.0"
+version: "0.5.1"
 date-released: "2026-04-14"
 keywords:
   - MATLAB
