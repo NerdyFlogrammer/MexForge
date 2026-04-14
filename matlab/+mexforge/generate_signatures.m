@@ -1,17 +1,18 @@
 function generate_signatures(mexFunc, outputDir)
-    % GENERATE_SIGNATURES  Generate functionSignatures.json for tab-completion.
+    % GENERATE_SIGNATURES  Generate tab-completion files for a MexForge binding.
     %
-    % Creates a JSON file that MATLAB uses for argument auto-completion
-    % in the command window and editor.
+    % Creates two files in outputDir:
+    %   1. functionSignatures.json  — enables argument hints in the MATLAB editor
+    %   2. <mexname>_obj.m          — auto-generated subclass of MexObject with
+    %                                 explicit method stubs for editor tab-completion
     %
     % Usage:
     %   mexforge.generate_signatures(@bindings)
     %   mexforge.generate_signatures(@bindings, './matlab')
     %
-    % The generated file enables:
-    %   - Tab-completion for method names
-    %   - Argument name hints in the editor
-    %   - Type information tooltips
+    % After running, use the generated class instead of MexObject:
+    %   calc = bindings_obj("myCalc");   % full editor completion
+    %   calc.add(2, 3)                   % IDE knows this method exists
 
     if nargin < 2
         outputDir = fileparts(which(func2str(mexFunc)));
@@ -20,7 +21,9 @@ function generate_signatures(mexFunc, outputDir)
         end
     end
 
-    % Get all methods
+    mexName = func2str(mexFunc);
+
+    % Collect method list
     try
         methods = cellstr(mexFunc("__list_methods"));
     catch
@@ -29,74 +32,175 @@ function generate_signatures(mexFunc, outputDir)
         methods = setdiff(methods, {'create', 'destroy'});
     end
 
-    % Build signature struct
-    sigs = struct();
+    % Collect metadata per method
+    meta = collectMeta(mexFunc, methods);
 
+    % 1) Write functionSignatures.json
+    writeJson(outputDir, methods, meta);
+
+    % 2) Write wrapper class
+    writeClass(outputDir, mexName, methods, meta);
+end
+
+% --------------------------------------------------------------------------
+
+function meta = collectMeta(mexFunc, methods)
+    meta = struct();
     for i = 1:numel(methods)
-        name = methods{i};
-
-        % Get argument info
+        name  = methods{i};
+        field = matlab.lang.makeValidName(name);
         try
-            argInfo = mexFunc("__arg_info", name);
+            meta.(field).args = mexFunc("__arg_info", name);
         catch
-            argInfo = [];
+            meta.(field).args = [];
         end
-
-        % Get description
         try
-            desc = mexFunc("__describe", name);
+            meta.(field).desc = char(mexFunc("__describe", name));
         catch
-            desc = '';
+            meta.(field).desc = '';
         end
+        try
+            meta.(field).ret = char(mexFunc("__return_type", name));
+        catch
+            meta.(field).ret = '';
+        end
+    end
+end
 
-        % Build input arguments
+% --------------------------------------------------------------------------
+
+function writeJson(outputDir, methods, meta)
+    sigs = struct();
+    for i = 1:numel(methods)
+        name  = methods{i};
+        field = matlab.lang.makeValidName(name);
+        m     = meta.(field);
+
         inputs = {};
-        for j = 1:numel(argInfo)
-            arg = struct();
-            arg.name = argInfo(j).name;
-            arg.kind = 'required';
-            if ~argInfo(j).required
-                arg.kind = 'namevalue';
+        for j = 1:numel(m.args)
+            a      = struct();
+            a.name = m.args(j).name;
+            a.kind = 'required';
+            if ~m.args(j).required
+                a.kind = 'namevalue';
             end
-
-            % Map C++ types to MATLAB types for completion
-            switch argInfo(j).type
+            switch m.args(j).type
                 case {'double', 'single'}
-                    arg.type = {{'numeric'}};
-                case {'int32', 'uint32', 'int64', 'uint64'}
-                    arg.type = {{'integer'}};
+                    a.type = {{'numeric'}};
+                case {'int32', 'uint32', 'int64', 'uint64', 'double[]'}
+                    a.type = {{'integer'}};
                 case {'string', 'char'}
-                    arg.type = {{'char', 'string'}};
+                    a.type = {{'char', 'string'}};
                 case 'logical'
-                    arg.type = {{'logical'}};
+                    a.type = {{'logical'}};
                 case 'struct'
-                    arg.type = {{'struct'}};
+                    a.type = {{'struct'}};
                 otherwise
-                    arg.type = {{'numeric'}};
+                    a.type = {{'numeric'}};
             end
-
-            inputs{end+1} = arg; %#ok<AGROW>
+            inputs{end+1} = a; %#ok<AGROW>
         end
 
         entry = struct();
-        if ~isempty(desc)
-            entry.description = desc;
+        if ~isempty(m.desc)
+            entry.description = m.desc;
         end
         if ~isempty(inputs)
             entry.inputs = inputs;
         end
-
-        % Sanitize name for struct field (replace invalid chars)
-        fieldName = matlab.lang.makeValidName(name);
-        sigs.(fieldName) = entry;
+        sigs.(field) = entry;
     end
 
-    % Write JSON
-    jsonText = jsonencode(sigs, 'PrettyPrint', true);
     outFile = fullfile(outputDir, 'functionSignatures.json');
     fid = fopen(outFile, 'w');
-    fprintf(fid, '%s', jsonText);
+    fprintf(fid, '%s', jsonencode(sigs, 'PrettyPrint', true));
     fclose(fid);
+    fprintf('  functionSignatures.json  (%d methods)\n', numel(methods));
+end
 
-    fprintf('Generated %s with %d method signatures.\n', outFile, numel(methods));
+% --------------------------------------------------------------------------
+
+function writeClass(outputDir, mexName, methods, meta)
+    className = [mexName '_obj'];
+    lines     = {};
+
+    function emit(s), lines{end+1} = s; end %#ok<NASGU>
+
+    emit(sprintf('%% AUTO-GENERATED by mexforge.generate_signatures — do not edit manually.'));
+    emit(sprintf('%% Regenerate: mexforge.generate_signatures(@%s)', mexName));
+    emit(sprintf('classdef %s < mexforge.MexObject', className));
+    emit(sprintf('    %% %s  Auto-generated wrapper for editor tab-completion.', upper(className)));
+    emit(sprintf('    %% Use instead of mexforge.MexObject for full IDE support:'));
+    emit(sprintf('    %%   calc = %s(constructor_args...);', className));
+    emit(sprintf('    %%   calc.add(2, 3)   %% editor sees this method'));
+    emit('');
+    emit('    methods');
+    emit(sprintf('        function obj = %s(varargin)', className));
+    emit(sprintf('            obj@mexforge.MexObject(@%s, varargin{:});', mexName));
+    emit('        end');
+    emit('');
+
+    for i = 1:numel(methods)
+        name  = methods{i};
+        field = matlab.lang.makeValidName(name);
+        m     = meta.(field);
+
+        % Split args into required and optional
+        reqArgs = {};
+        hasOpt  = false;
+        for j = 1:numel(m.args)
+            if m.args(j).required
+                reqArgs{end+1} = m.args(j).name; %#ok<AGROW>
+            else
+                hasOpt = true;
+                break;
+            end
+        end
+
+        % Build function signature line
+        if isempty(reqArgs) && ~hasOpt
+            sig = sprintf('        function varargout = %s(obj)', name);
+            callArgs = sprintf('"%" ', name);
+            callArgs = sprintf('"%s"', name);
+        elseif hasOpt
+            if isempty(reqArgs)
+                sig = sprintf('        function varargout = %s(obj, varargin)', name);
+                callArgs = sprintf('"%s", varargin{:}', name);
+            else
+                sig = sprintf('        function varargout = %s(obj, %s, varargin)', ...
+                    name, strjoin(reqArgs, ', '));
+                callArgs = sprintf('"%s", %s, varargin{:}', name, strjoin(reqArgs, ', '));
+            end
+        else
+            sig = sprintf('        function varargout = %s(obj, %s)', ...
+                name, strjoin(reqArgs, ', '));
+            callArgs = sprintf('"%s", %s', name, strjoin(reqArgs, ', '));
+        end
+
+        % Comment
+        commentStr = m.desc;
+        if ~isempty(m.ret) && ~strcmp(m.ret, 'void')
+            commentStr = sprintf('%s → %s', commentStr, m.ret);
+        end
+
+        emit(sig);
+        if ~isempty(commentStr)
+            emit(sprintf('            %% %s', commentStr));
+        end
+        emit(sprintf('            [varargout{1:nargout}] = callMethod(obj, %s);', callArgs));
+        emit('        end');
+        emit('');
+    end
+
+    emit('    end');
+    emit('end');
+
+    outFile = fullfile(outputDir, [className '.m']);
+    fid = fopen(outFile, 'w');
+    for k = 1:numel(lines)
+        fprintf(fid, '%s\n', lines{k});
+    end
+    fclose(fid);
+    fprintf('  %s.m  (%d methods)\n', className, numel(methods));
+    fprintf('Usage: calc = %s(constructor_args...);\n', className);
 end
