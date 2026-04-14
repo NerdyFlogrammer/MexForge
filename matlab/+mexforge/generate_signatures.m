@@ -145,12 +145,13 @@ function writeClass(outputDir, mexName, methods, meta)
         field = matlab.lang.makeValidName(name);
         m     = meta.(field);
 
-        % Split args into required and optional
+        % Split args into required and optional.
+        % Use char() so reqArgs is always a cell of char vectors (strjoin requirement).
         reqArgs = {};
         hasOpt  = false;
         for j = 1:numel(m.args)
             if m.args(j).required
-                reqArgs{end+1} = m.args(j).name; %#ok<AGROW>
+                reqArgs{end+1} = char(m.args(j).name); %#ok<AGROW>
             else
                 hasOpt = true;
                 break;
@@ -159,8 +160,7 @@ function writeClass(outputDir, mexName, methods, meta)
 
         % Build function signature line
         if isempty(reqArgs) && ~hasOpt
-            sig = sprintf('        function varargout = %s(obj)', name);
-            callArgs = sprintf('"%" ', name);
+            sig      = sprintf('        function varargout = %s(obj)', name);
             callArgs = sprintf('"%s"', name);
         elseif hasOpt
             if isempty(reqArgs)
