@@ -36,7 +36,7 @@ function generate_signatures(mexFunc, outputDir)
     meta = collectMeta(mexFunc, methods);
 
     % 1) Write functionSignatures.json
-    writeJson(outputDir, methods, meta);
+    writeJson(outputDir, mexName, methods, meta);
 
     % 2) Write wrapper class
     writeClass(outputDir, mexName, methods, meta);
@@ -69,53 +69,62 @@ end
 
 % --------------------------------------------------------------------------
 
-function writeJson(outputDir, methods, meta)
-    sigs = struct();
-    for i = 1:numel(methods)
+function writeJson(outputDir, mexName, methods, meta)
+    % Build functionSignatures.json manually so we can use "ClassName.methodName"
+    % as keys — MATLAB struct fields can't contain dots, so jsonencode alone
+    % can't produce the right format. This is the official format for class
+    % method argument hints in the Live Editor.
+    className = [mexName '_obj'];
+
+    outFile = fullfile(outputDir, 'functionSignatures.json');
+    fid = fopen(outFile, 'w');
+    fprintf(fid, '{\n');
+
+    nMethods = numel(methods);
+    for i = 1:nMethods
         name  = methods{i};
         field = matlab.lang.makeValidName(name);
         m     = meta.(field);
 
-        inputs = {};
-        for j = 1:numel(m.args)
-            a      = struct();
-            a.name = m.args(j).name;
-            a.kind = 'required';
-            if ~m.args(j).required
-                a.kind = 'namevalue';
-            end
-            switch m.args(j).type
-                case {'double', 'single'}
-                    a.type = {{'numeric'}};
-                case {'int32', 'uint32', 'int64', 'uint64', 'double[]'}
-                    a.type = {{'integer'}};
-                case {'string', 'char'}
-                    a.type = {{'char', 'string'}};
-                case 'logical'
-                    a.type = {{'logical'}};
-                case 'struct'
-                    a.type = {{'struct'}};
-                otherwise
-                    a.type = {{'numeric'}};
-            end
-            inputs{end+1} = a; %#ok<AGROW>
-        end
+        inputs = buildInputs(m);
+        entry  = struct();
+        if ~isempty(m.desc),   entry.description = m.desc; end
+        if ~isempty(inputs),   entry.inputs = inputs;      end
 
-        entry = struct();
-        if ~isempty(m.desc)
-            entry.description = m.desc;
-        end
-        if ~isempty(inputs)
-            entry.inputs = inputs;
-        end
-        sigs.(field) = entry;
+        entryJson = jsonencode(entry);
+
+        % Standalone function key (for raw MEX calls)
+        fprintf(fid, '  "%s": %s', name, entryJson);
+        fprintf(fid, ',\n');
+
+        % ClassName.methodName key — Live Editor uses this for obj.method() hints
+        comma = '';
+        if i < nMethods, comma = ','; end
+        fprintf(fid, '  "%s.%s": %s%s\n', className, name, entryJson, comma);
     end
 
-    outFile = fullfile(outputDir, 'functionSignatures.json');
-    fid = fopen(outFile, 'w');
-    fprintf(fid, '%s', jsonencode(sigs, 'PrettyPrint', true));
+    fprintf(fid, '}\n');
     fclose(fid);
     fprintf('  functionSignatures.json  (%d methods)\n', numel(methods));
+end
+
+function inputs = buildInputs(m)
+    inputs = {};
+    for j = 1:numel(m.args)
+        a      = struct();
+        a.name = char(m.args(j).name);
+        a.kind = 'required';
+        if ~m.args(j).required, a.kind = 'namevalue'; end
+        switch char(m.args(j).type)
+            case {'double','single'},                       a.type = {{'numeric'}};
+            case {'int32','uint32','int64','uint64','double[]'}, a.type = {{'numeric'}};
+            case {'string','char'},                         a.type = {{'char','string'}};
+            case 'logical',                                 a.type = {{'logical'}};
+            case 'struct',                                  a.type = {{'struct'}};
+            otherwise,                                      a.type = {{'numeric'}};
+        end
+        inputs{end+1} = a; %#ok<AGROW>
+    end
 end
 
 % --------------------------------------------------------------------------
