@@ -3,6 +3,10 @@
 % This shows how MexObject eliminates the need for writing
 % a MATLAB wrapper class. The C++ bindings define the interface.
 
+%% Setup: add MexForge's MATLAB package to the path
+repoRoot = fullfile(fileparts(mfilename('fullpath')), '..', '..', '..');
+addpath(fullfile(repoRoot, 'matlab'));
+
 %% Create calculator using MexObject
 calc = mexforge.MexObject(@bindings, "demo");
 
