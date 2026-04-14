@@ -84,8 +84,14 @@ classdef MexObject < handle & matlab.mixin.CustomDisplay
             end
         end
 
+        function help(obj, methodName)
+            % HELP  Show help for a specific method.
+            %   obj.help("add")
+            obj.showHelp(methodName);
+        end
+
         function showHelp(obj, methodName)
-            % SHOWHELP  Show help for a specific method.
+            % SHOWHELP  Show help for a specific method (alias: obj.help).
             %   obj.showHelp("add")
 
             desc = obj.getDescription(methodName);
@@ -223,14 +229,17 @@ classdef MexObject < handle & matlab.mixin.CustomDisplay
     end
 
     % ---- Tab-completion ----
+    % Returning the MEX method names from properties() makes MATLAB's dot-notation
+    % tab completion (obj.<TAB>) show the available methods in the command window.
+    % fieldnames() is used as a fallback for struct-like expansion contexts.
 
     methods (Hidden, Access = public)
-        function names = properties(obj) %#ok<MANU>
-            names = {};
+        function names = properties(obj)
+            names = sort(obj.methods_);
         end
 
         function names = fieldnames(obj)
-            names = obj.methods_;
+            names = sort(obj.methods_);
         end
     end
 
@@ -241,7 +250,7 @@ classdef MexObject < handle & matlab.mixin.CustomDisplay
             className = class(obj);
             header = matlab.mixin.CustomDisplay.getClassNameForHeader(obj);
             fprintf('  %s (MexForge object, ID=%d)\n\n', header, obj.id_);
-            fprintf('  %d methods available. Use obj.availableMethods() to list.\n\n', ...
+            fprintf('  %d methods available. Use obj.availableMethods() to list, obj.help(name) for docs.\n\n', ...
                 numel(obj.methods_));
         end
     end
