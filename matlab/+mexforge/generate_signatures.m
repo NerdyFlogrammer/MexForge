@@ -163,28 +163,52 @@ function writeClass(outputDir, mexName, methods, meta)
             end
         end
 
+        % Use explicit return var (not varargout) — editor shows hints only for
+        % functions with named outputs. Void methods have no return variable.
+        hasReturn = ~isempty(m.ret) && ~strcmp(m.ret, 'void');
+        retPrefix = '';
+        if hasReturn, retPrefix = 'result = '; end
+
         % Function signature
         if isempty(reqArgs) && ~hasOpt
-            sig      = sprintf('        function varargout = %s(obj)', name);
+            if hasReturn
+                sig = sprintf('        function result = %s(obj)', name);
+            else
+                sig = sprintf('        function %s(obj)', name);
+            end
             callArgs = sprintf('"%s"', name);
         elseif hasOpt
             if isempty(reqArgs)
-                sig      = sprintf('        function varargout = %s(obj, varargin)', name);
+                if hasReturn
+                    sig = sprintf('        function result = %s(obj, varargin)', name);
+                else
+                    sig = sprintf('        function %s(obj, varargin)', name);
+                end
                 callArgs = sprintf('"%s", varargin{:}', name);
             else
-                sig      = sprintf('        function varargout = %s(obj, %s, varargin)', ...
-                    name, strjoin(reqArgs, ', '));
+                if hasReturn
+                    sig = sprintf('        function result = %s(obj, %s, varargin)', ...
+                        name, strjoin(reqArgs, ', '));
+                else
+                    sig = sprintf('        function %s(obj, %s, varargin)', ...
+                        name, strjoin(reqArgs, ', '));
+                end
                 callArgs = sprintf('"%s", %s, varargin{:}', name, strjoin(reqArgs, ', '));
             end
         else
-            sig      = sprintf('        function varargout = %s(obj, %s)', ...
-                name, strjoin(reqArgs, ', '));
+            if hasReturn
+                sig = sprintf('        function result = %s(obj, %s)', ...
+                    name, strjoin(reqArgs, ', '));
+            else
+                sig = sprintf('        function %s(obj, %s)', ...
+                    name, strjoin(reqArgs, ', '));
+            end
             callArgs = sprintf('"%s", %s', name, strjoin(reqArgs, ', '));
         end
 
         % Comment
         commentStr = m.desc;
-        if ~isempty(m.ret) && ~strcmp(m.ret, 'void')
+        if hasReturn
             commentStr = sprintf('%s → %s', commentStr, m.ret);
         end
 
@@ -193,18 +217,22 @@ function writeClass(outputDir, mexName, methods, meta)
             emit(sprintf('            %% %s', commentStr));
         end
 
-        % arguments block — enables editor argument hints and type tooltips
+        % arguments block — gives editor type info and enables parameter hints
         if ~isempty(reqArgs) && ~hasOpt
             emit('            arguments');
             emit('                obj');
             for j = 1:numel(reqArgs)
                 mtype = matlabType(reqArgTypes{j});
-                emit(sprintf('                %s %s', reqArgs{j}, mtype));
+                if isempty(mtype)
+                    emit(sprintf('                %s', reqArgs{j}));
+                else
+                    emit(sprintf('                %s %s', reqArgs{j}, mtype));
+                end
             end
             emit('            end');
         end
 
-        emit(sprintf('            [varargout{1:nargout}] = callMethod(obj, %s);', callArgs));
+        emit(sprintf('            %scallMethod(obj, %s);', retPrefix, callArgs));
         emit('        end');
         emit('');
     end
