@@ -13,6 +13,7 @@ repoRoot    = fullfile(fileparts(mfilename('fullpath')), '..', '..', '..');
 bindingsDir = fullfile(fileparts(mfilename('fullpath')), '..');
 addpath(fullfile(repoRoot, 'matlab'));   % +mexforge package
 addpath(bindingsDir);                    % bindings MEX + generated class
+savepath;  % make permanent so the editor can resolve bindings_obj statically
 
 %% Generate wrapper class for full editor tab-completion
 %  (run once after each recompile — creates bindings_obj.m in bindingsDir)
@@ -23,8 +24,6 @@ rehash path;   % let MATLAB pick up the newly written bindings_obj.m
 %% Create calculator using the auto-generated wrapper class
 %  The editor now knows all methods — tab-completion works!
 calc = bindings_obj("demo");
-
-
 
 %% Call methods dynamically — these dispatch to C++ automatically
 result = calc.add(2, 3);
