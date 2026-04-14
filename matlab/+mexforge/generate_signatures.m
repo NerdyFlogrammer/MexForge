@@ -217,21 +217,6 @@ function writeClass(outputDir, mexName, methods, meta)
             emit(sprintf('            %% %s', commentStr));
         end
 
-        % arguments block — gives editor type info and enables parameter hints
-        if ~isempty(reqArgs) && ~hasOpt
-            emit('            arguments');
-            emit('                obj');
-            for j = 1:numel(reqArgs)
-                mtype = matlabType(reqArgTypes{j});
-                if isempty(mtype)
-                    emit(sprintf('                %s', reqArgs{j}));
-                else
-                    emit(sprintf('                %s %s', reqArgs{j}, mtype));
-                end
-            end
-            emit('            end');
-        end
-
         emit(sprintf('            %scallMethod(obj, %s);', retPrefix, callArgs));
         emit('        end');
         emit('');
