@@ -24,6 +24,8 @@ rehash path;   % let MATLAB pick up the newly written bindings_obj.m
 %  The editor now knows all methods — tab-completion works!
 calc = bindings_obj("demo");
 
+
+
 %% Call methods dynamically — these dispatch to C++ automatically
 result = calc.add(2, 3);
 fprintf('add(2, 3) = %g\n', result);
@@ -41,9 +43,8 @@ fprintf('compute(10, 3, "div") = %g\n', result);
 calc.availableMethods();
 
 %% Help for a specific method
-calc.showHelp("compute");
-calc.showHelp("linspace");
-
+calc.help("compute");
+calc.help("linspace");
 %% Batch operations
 data = calc.linspace(0, pi, 100);
 sines = calc.apply(data, "sin");

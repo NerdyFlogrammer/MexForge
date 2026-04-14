@@ -269,6 +269,11 @@ function writeClass(outputDir, mexName, methods, meta)
     emit('            fprintf(''\n'');');
     emit('        end');
     emit('');
+    emit('        function showHelp(obj, methodName)');
+    emit('            % Show help for a specific method (alias: help)');
+    emit('            obj.help(methodName);');
+    emit('        end');
+    emit('');
     emit('        function help(obj, methodName)');
     emit('            % Show help for a specific method');
     emit('            try');
